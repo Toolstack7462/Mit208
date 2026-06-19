@@ -1,0 +1,31 @@
+# ---- Python / backend ----
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+backend/.env
+backend/phishguard.db
+*.sqlite3
+*.db
+
+# ---- Node / frontend ----
+node_modules/
+frontend/dist/
+frontend/.env
+frontend/dev.log
+npm-debug.log*
+yarn-error.log*
+
+# ---- Editors / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ---- Logs / runtime ----
+backend/server.log
+*.log

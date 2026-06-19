@@ -1,0 +1,171 @@
+[
+  {
+    "message_id": "<sample-1@phishguard.local>",
+    "sender": "security@paypa1-support.com",
+    "sender_name": "PayPal Security",
+    "recipient": "staff@phishguard.local",
+    "subject": "Urgent: Your account has been suspended - verify now",
+    "body": "Dear customer,\n\nWe detected unusual activity. Your account suspended until you verify your identity. Please confirm your password immediately or your account will expire within 24 hours.\n\n<a href=\"http://198.51.100.23/paypal/login\">https://www.paypal.com/login</a>\n\nFailure to act now will result in permanent closure.\nPayPal Security Team",
+    "risk_score": 100,
+    "risk_level": "critical",
+    "ai_generated": true,
+    "auth": {
+      "spf": "fail",
+      "dkim": "fail",
+      "dmarc": "fail"
+    },
+    "score_reasons": [
+      "Display name impersonates 'paypal' but domain is 'paypa1-support.com'.",
+      "Urgency / pressure language: account suspended, act now, expire.",
+      "Requests credentials / sensitive data: confirm your password, verify your identity.",
+      "Link points directly to a raw IP address.",
+      "Link text shows 'www.paypal.com' but actually points to '198.51.100.23'.",
+      "Copy uses templated phrasing typical of AI-generated / mass phishing."
+    ]
+  },
+  {
+    "message_id": "<sample-2@phishguard.local>",
+    "sender": "rewards@amaz0n-giftcards.net",
+    "sender_name": "Amazon Rewards",
+    "recipient": "staff@phishguard.local",
+    "subject": "Congratulations! You have won a $500 gift card",
+    "body": "You have won a $500 Amazon gift card! Claim your free prize now before it expires. Click here: http://bit.ly/claim-prize-now and provide your credit card to cover shipping.",
+    "risk_score": 73,
+    "risk_level": "high",
+    "ai_generated": false,
+    "auth": {
+      "spf": "fail",
+      "dkim": "fail",
+      "dmarc": "fail"
+    },
+    "score_reasons": [
+      "Display name impersonates 'amazon' but domain is 'amaz0n-giftcards.net'.",
+      "Urgency / pressure language: expire.",
+      "Requests credentials / sensitive data: credit card.",
+      "Financial lure / bait: claim your, gift card, prize.",
+      "Uses URL shortener(s): bit.ly."
+    ]
+  },
+  {
+    "message_id": "<sample-3@phishguard.local>",
+    "sender": "it-helpdesk@company-secure-verify.com",
+    "sender_name": "IT Helpdesk",
+    "recipient": "jane.staff@phishguard.local",
+    "subject": "Action required: Update your password today",
+    "body": "Our records show your mailbox is full. To avoid losing emails you must update your password immediately. Log in to http://company-secure-verify.com/reset and confirm your identity. This is a final notice.",
+    "risk_score": 58,
+    "risk_level": "high",
+    "ai_generated": false,
+    "auth": {
+      "spf": "fail",
+      "dkim": "fail",
+      "dmarc": "fail"
+    },
+    "score_reasons": [
+      "Sender domain looks auto-generated / suspicious.",
+      "Urgency / pressure language: action required, final notice, immediately.",
+      "Requests credentials / sensitive data: confirm your identity, log in to, update your password."
+    ]
+  },
+  {
+    "message_id": "<sample-4@phishguard.local>",
+    "sender": "no-reply@micros0ft-alerts.com",
+    "sender_name": "Microsoft Account Team",
+    "recipient": "staff@phishguard.local",
+    "subject": "Unusual sign-in activity detected",
+    "body": "We detected a sign-in from a new device. If this wasn't you, verify your account immediately by opening the attached invoice.html file and signing in to restore access.",
+    "risk_score": 55,
+    "risk_level": "high",
+    "ai_generated": true,
+    "auth": {
+      "spf": "fail",
+      "dkim": "fail",
+      "dmarc": "fail"
+    },
+    "score_reasons": [
+      "Display name impersonates 'microsoft' but domain is 'micros0ft-alerts.com'.",
+      "Urgency / pressure language: immediately.",
+      "Requests credentials / sensitive data: verify your account.",
+      "References risky attachment type(s): .htm, .html.",
+      "Copy uses templated phrasing typical of AI-generated / mass phishing."
+    ]
+  },
+  {
+    "message_id": "<sample-5@phishguard.local>",
+    "sender": "billing@netfl1x-billing.info",
+    "sender_name": "Netflix",
+    "recipient": "jane.staff@phishguard.local",
+    "subject": "Your payment is overdue - update billing",
+    "body": "Your membership is on hold because your payment is overdue. Update your billing details now to avoid cancellation. Visit tinyurl.com/netflix-billing and enter your card number to continue watching.",
+    "risk_score": 46,
+    "risk_level": "medium",
+    "ai_generated": false,
+    "auth": {
+      "spf": "fail",
+      "dkim": "fail",
+      "dmarc": "fail"
+    },
+    "score_reasons": [
+      "Display name impersonates 'netflix' but domain is 'netfl1x-billing.info'.",
+      "Requests credentials / sensitive data: card number.",
+      "Uses URL shortener(s): tinyurl.com."
+    ]
+  },
+  {
+    "message_id": "<sample-6@phishguard.local>",
+    "sender": "newsletter@techweekly.com",
+    "sender_name": "Tech Weekly",
+    "recipient": "staff@phishguard.local",
+    "subject": "Your Monday tech digest is here",
+    "body": "Hi Riley,\n\nHere are this week's top engineering reads, including a deep dive on Postgres indexing and a guide to FastAPI dependency injection. Read online at https://techweekly.com/digest .\n\nHappy reading!",
+    "risk_score": 0,
+    "risk_level": "low",
+    "ai_generated": false,
+    "auth": {
+      "spf": "pass",
+      "dkim": "pass",
+      "dmarc": "pass"
+    },
+    "score_reasons": [
+      "No phishing indicators detected by rule engine."
+    ]
+  },
+  {
+    "message_id": "<sample-7@phishguard.local>",
+    "sender": "hr@phishguard.local",
+    "sender_name": "PhishGuard HR",
+    "recipient": "jane.staff@phishguard.local",
+    "subject": "Reminder: Submit your timesheet by Friday",
+    "body": "Hi Jane,\n\nThis is a friendly reminder to submit your timesheet in the HR portal by end of day Friday. Let me know if you have any questions.\n\nThanks,\nHR Team",
+    "risk_score": 0,
+    "risk_level": "low",
+    "ai_generated": false,
+    "auth": {
+      "spf": "pass",
+      "dkim": "pass",
+      "dmarc": "pass"
+    },
+    "score_reasons": [
+      "No phishing indicators detected by rule engine."
+    ]
+  },
+  {
+    "message_id": "<sample-8@phishguard.local>",
+    "sender": "calendar@phishguard.local",
+    "sender_name": "Team Calendar",
+    "recipient": "staff@phishguard.local",
+    "subject": "Meeting invite: Sprint planning Thursday 10am",
+    "body": "You're invited to Sprint Planning on Thursday at 10:00am in Room 4. Agenda and notes are in the shared drive. See you there!",
+    "risk_score": 0,
+    "risk_level": "low",
+    "ai_generated": false,
+    "auth": {
+      "spf": "pass",
+      "dkim": "pass",
+      "dmarc": "pass"
+    },
+    "score_reasons": [
+      "No phishing indicators detected by rule engine."
+    ]
+  }
+]

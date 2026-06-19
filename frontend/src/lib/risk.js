@@ -12,24 +12,27 @@ export function riskCategory(level) {
 export const CATEGORY_META = {
   high: {
     label: "High Risk",
-    badge: "bg-red-100 text-red-700 ring-1 ring-red-200",
+    badge: "bg-red-50 text-red-700 ring-1 ring-red-200",
     dot: "bg-red-500",
     bar: "bg-red-500",
     text: "text-red-600",
+    hex: "#ef4444",
   },
   uncertain: {
     label: "Uncertain",
-    badge: "bg-amber-100 text-amber-700 ring-1 ring-amber-200",
+    badge: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
     dot: "bg-amber-500",
     bar: "bg-amber-500",
     text: "text-amber-600",
+    hex: "#f59e0b",
   },
   safe: {
     label: "Safe",
-    badge: "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200",
+    badge: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200",
     dot: "bg-emerald-500",
     bar: "bg-emerald-500",
     text: "text-emerald-600",
+    hex: "#10b981",
   },
 };
 

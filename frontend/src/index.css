@@ -9,32 +9,60 @@ body,
 }
 
 body {
-  @apply bg-slate-100 text-slate-800 antialiased;
+  @apply bg-slate-50 text-slate-800 antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 @layer components {
+  /* Surfaces */
   .card {
-    @apply rounded-xl bg-white shadow-card border border-slate-200/70;
+    @apply rounded-xl bg-white shadow-card border border-slate-200/80;
   }
+
+  /* Buttons */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold
            transition focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50
            disabled:cursor-not-allowed;
   }
+  .btn-sm {
+    @apply px-3 py-2 text-xs;
+  }
   .btn-primary {
-    @apply btn bg-brand text-white hover:bg-brand-700 focus:ring-brand;
+    @apply btn bg-brand text-white hover:bg-brand-700 focus:ring-brand/40 shadow-sm;
   }
   .btn-danger {
-    @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
+    @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500/40 shadow-sm;
   }
   .btn-success {
-    @apply btn bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500;
+    @apply btn bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500/40 shadow-sm;
+  }
+  .btn-outline {
+    @apply btn bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:border-slate-400 focus:ring-slate-300;
+  }
+  .btn-outline-danger {
+    @apply btn bg-white text-red-600 border border-red-200 hover:bg-red-50 focus:ring-red-300;
+  }
+  .btn-outline-success {
+    @apply btn bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50 focus:ring-emerald-300;
   }
   .btn-ghost {
-    @apply btn bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 focus:ring-slate-300;
+    @apply btn bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 focus:ring-slate-300;
   }
+
+  /* Inputs */
   .input {
-    @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800
-           placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30;
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800
+           placeholder:text-slate-400 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/10;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  /* Section label */
+  .section-label {
+    @apply text-xs font-bold uppercase tracking-wide text-slate-400;
   }
 }

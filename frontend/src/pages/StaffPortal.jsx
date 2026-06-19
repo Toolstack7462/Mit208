@@ -1,24 +1,46 @@
 import { useEffect, useState, useCallback } from "react";
+import { Mail, ShieldAlert, SendHorizontal, CheckCircle2 } from "lucide-react";
 import Layout from "../components/Layout";
 import RiskBadge from "../components/RiskBadge";
 import EmailDetailPanel from "../components/EmailDetailPanel";
 import api from "../api";
 import { STATUS_META, formatDate } from "../lib/risk";
 
+function MiniStat({ icon: Icon, label, value, tone }) {
+  const tones = {
+    blue: "bg-brand/10 text-brand",
+    amber: "bg-amber-100 text-amber-600",
+    violet: "bg-violet-100 text-violet-600",
+  };
+  return (
+    <div className="card flex items-center gap-4 p-5">
+      <div className={`grid h-11 w-11 place-items-center rounded-lg ${tones[tone]}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div>
+        <div className="text-2xl font-extrabold text-navy-900">{value}</div>
+        <div className="text-sm text-slate-500">{label}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function StaffPortal() {
   const [emails, setEmails] = useState([]);
+  const [pending, setPending] = useState(0);
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [toast, setToast] = useState("");
-  const [reasonFor, setReasonFor] = useState(null); // email object pending a reason
+  const [reasonFor, setReasonFor] = useState(null);
   const [reason, setReason] = useState("");
 
   const loadList = useCallback(async () => {
-    const r = await api.get("/api/emails");
-    setEmails(r.data);
-    return r.data;
+    const [er, rr] = await Promise.all([api.get("/api/emails"), api.get("/api/release-requests")]);
+    setEmails(er.data);
+    setPending(rr.data.filter((r) => r.status === "pending").length);
+    return er.data;
   }, []);
 
   useEffect(() => {
@@ -55,6 +77,7 @@ export default function StaffPortal() {
     try {
       await api.post("/api/release-requests", { email_id: reasonFor.id, reason });
       setReasonFor(null);
+      await loadList();
       flash("Release request submitted to analysts");
     } catch (err) {
       flash(err?.response?.data?.detail || "Could not submit request");
@@ -63,40 +86,27 @@ export default function StaffPortal() {
     }
   }
 
-  const quarantinedCount = emails.filter((e) =>
-    ["quarantined", "confirmed_phishing"].includes(e.status)
-  ).length;
+  const heldCount = emails.filter((e) => ["quarantined", "confirmed_phishing"].includes(e.status)).length;
 
   return (
-    <Layout
-      title="Staff Portal"
-      subtitle="Your mailbox — request release of quarantined emails you trust"
-    >
+    <Layout title="Staff Portal" subtitle="Your mailbox — request release of held emails you trust">
       {toast && (
-        <div className="fixed right-6 top-6 z-50 rounded-lg bg-navy-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg">
+        <div className="fixed right-8 top-6 z-50 flex items-center gap-2 rounded-lg bg-navy-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
           {toast}
         </div>
       )}
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-3">
-        <div className="card p-5">
-          <div className="text-2xl font-extrabold text-navy-900">{emails.length}</div>
-          <div className="text-sm text-slate-500">Emails in your mailbox</div>
-        </div>
-        <div className="card p-5">
-          <div className="text-2xl font-extrabold text-amber-600">{quarantinedCount}</div>
-          <div className="text-sm text-slate-500">Held / quarantined</div>
-        </div>
-        <div className="card flex items-center p-5 text-sm text-slate-500">
-          Found a held email you were expecting? Open it and click{" "}
-          <span className="mx-1 font-semibold text-brand">Request Email Release</span>.
-        </div>
+      <div className="mb-6 grid gap-5 sm:grid-cols-3">
+        <MiniStat icon={Mail} label="Emails in your mailbox" value={emails.length} tone="blue" />
+        <MiniStat icon={ShieldAlert} label="Held / quarantined" value={heldCount} tone="amber" />
+        <MiniStat icon={SendHorizontal} label="Pending release requests" value={pending} tone="violet" />
       </div>
 
-      <div className="grid h-[calc(100vh-16rem)] grid-cols-1 gap-5 lg:grid-cols-[minmax(340px,400px)_1fr]">
+      <div className="grid h-[calc(100vh-17.5rem)] grid-cols-1 gap-6 lg:grid-cols-[minmax(340px,400px)_1fr]">
         <div className="card flex flex-col overflow-hidden">
-          <div className="border-b border-slate-200 px-4 py-3 text-sm font-bold uppercase tracking-wide text-slate-500">
-            My Emails
+          <div className="border-b border-slate-200 px-4 py-3.5">
+            <span className="section-label">My Emails</span>
           </div>
           <div className="flex-1 divide-y divide-slate-100 overflow-y-auto">
             {emails.length === 0 && (
@@ -104,12 +114,13 @@ export default function StaffPortal() {
             )}
             {emails.map((e) => {
               const status = STATUS_META[e.status] || STATUS_META.inbox;
+              const active = selectedId === e.id;
               return (
                 <button
                   key={e.id}
                   onClick={() => setSelectedId(e.id)}
-                  className={`block w-full px-4 py-3 text-left transition hover:bg-slate-50 ${
-                    selectedId === e.id ? "bg-brand/5 ring-1 ring-inset ring-brand/20" : ""
+                  className={`block w-full border-l-[3px] px-4 py-3.5 text-left transition ${
+                    active ? "border-brand bg-brand/5" : "border-transparent hover:bg-slate-50"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -119,11 +130,9 @@ export default function StaffPortal() {
                     <span className="shrink-0 text-[11px] text-slate-400">{formatDate(e.received_at)}</span>
                   </div>
                   <div className="mt-0.5 truncate text-sm text-slate-600">{e.subject}</div>
-                  <div className="mt-1.5 flex items-center gap-2">
+                  <div className="mt-2 flex items-center gap-2">
                     <RiskBadge level={e.risk_level} />
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.cls}`}>
-                      {status.label}
-                    </span>
+                    <span className={`badge ${status.cls}`}>{status.label}</span>
                   </div>
                 </button>
               );
@@ -142,13 +151,13 @@ export default function StaffPortal() {
 
       {/* Reason modal */}
       {reasonFor && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-navy-950/40 p-4">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-navy-950/50 p-4">
           <div className="card w-full max-w-md p-6">
             <h3 className="text-lg font-bold text-navy-900">Request Email Release</h3>
             <p className="mt-1 text-sm text-slate-500">
               Tell the analyst why you believe this email is safe to release.
             </p>
-            <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+            <div className="mt-3 rounded-lg bg-slate-50 px-3.5 py-2.5 text-sm ring-1 ring-slate-200">
               <div className="font-medium text-navy-900">{reasonFor.subject}</div>
               <div className="text-xs text-slate-400">{reasonFor.sender}</div>
             </div>
@@ -159,10 +168,8 @@ export default function StaffPortal() {
               onChange={(e) => setReason(e.target.value)}
             />
             <div className="mt-4 flex justify-end gap-2">
-              <button className="btn-ghost" onClick={() => setReasonFor(null)}>
-                Cancel
-              </button>
-              <button className="btn-primary" disabled={busy} onClick={submitRequest}>
+              <button className="btn-ghost btn-sm" onClick={() => setReasonFor(null)}>Cancel</button>
+              <button className="btn-primary btn-sm" disabled={busy} onClick={submitRequest}>
                 Submit Request
               </button>
             </div>

@@ -83,6 +83,12 @@ SAMPLE_EMAILS = [
     ),
 ]
 
+# How many calendar days ago each sample email arrived (anchored to noon so
+# bucketing is stable regardless of time-of-day / timezone). Spread across the
+# last 7 days (today .. 6 days ago) so the dashboard's Weekly Threat
+# Distribution chart shows a full week. (Index aligns with SAMPLE_EMAILS.)
+DAYS_AGO = [5, 4, 2, 0, 3, 1, 5, 3]
+
 
 def reset_schema():
     print("Dropping and recreating all tables ...")
@@ -109,6 +115,7 @@ def seed():
         db.flush()
 
         now = datetime.now(timezone.utc)
+        noon_today = now.replace(hour=12, minute=0, second=0, microsecond=0)
         emails: list[EmailRecord] = []
         for i, (sender, sender_name, recipient, subject, body) in enumerate(SAMPLE_EMAILS):
             result = score_email(sender, subject, body, sender_name)
@@ -121,7 +128,7 @@ def seed():
                 score_reasons=json.dumps(result.reasons),
                 auth_spf=result.spf, auth_dkim=result.dkim, auth_dmarc=result.dmarc,
                 ai_generated=result.ai_generated,
-                received_at=now - timedelta(hours=(len(SAMPLE_EMAILS) - i) * 3),
+                received_at=noon_today - timedelta(days=DAYS_AGO[i]),
             )
             db.add(email)
             emails.append(email)

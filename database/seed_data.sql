@@ -7,10 +7,10 @@
 TRUNCATE audit_logs, staff_release_requests, analyst_reviews, email_records, users RESTART IDENTITY CASCADE;
 
 -- Users -----------------------------------------------------------------
-INSERT INTO users (email, full_name, hashed_password, role, is_active) VALUES ('admin@phishguard.local', 'Alex Admin', '$2b$12$cMeCpMSxMllYbKkNaJyen.kYnkORx6u0.mYGQ3iqSBLq/bUmi/Hu.', 'admin', TRUE);
-INSERT INTO users (email, full_name, hashed_password, role, is_active) VALUES ('analyst@phishguard.local', 'Sam Analyst', '$2b$12$VKw71keNHP.5RWPqYveXFe7OXHAPNptY.UBz3zXqIkf7BO0cMdxQS', 'analyst', TRUE);
-INSERT INTO users (email, full_name, hashed_password, role, is_active) VALUES ('staff@phishguard.local', 'Riley Staff', '$2b$12$xN8r4.eT747BRlFHjZUYje5CVKxTL/t1C9fAEfZbSIora2V8s.JEW', 'staff', TRUE);
-INSERT INTO users (email, full_name, hashed_password, role, is_active) VALUES ('jane.staff@phishguard.local', 'Jane Worker', '$2b$12$PBWAj1H.gv1OvfQC8KhtmuyBZEdDNLXf2Nu2jqY7/RbzzIAque7tC', 'staff', TRUE);
+INSERT INTO users (email, full_name, hashed_password, role, is_active) VALUES ('admin@phishguard.local', 'Alex Admin', '$2b$12$TnNZizFZU4MUUhlxufgsIulC2vJ2qWXhnUDmezAn0AfNijiBc4K2G', 'admin', TRUE);
+INSERT INTO users (email, full_name, hashed_password, role, is_active) VALUES ('analyst@phishguard.local', 'Sam Analyst', '$2b$12$LFUOGpgflbEdLzuTPLEcz.KfbNn5.3sc5.609JjitbRtaZAcG42Oe', 'analyst', TRUE);
+INSERT INTO users (email, full_name, hashed_password, role, is_active) VALUES ('staff@phishguard.local', 'Riley Staff', '$2b$12$Kb5El7xjNo9qdI3PEZSATOpp1idP9OzRMSJVIPzy6tUdxcpIHbUH.', 'staff', TRUE);
+INSERT INTO users (email, full_name, hashed_password, role, is_active) VALUES ('jane.staff@phishguard.local', 'Jane Worker', '$2b$12$BlcvHAfGUlcHMuHtAbKulOdnmboSSb6lP7HaWtP7JJ8DtKE9MP4cy', 'staff', TRUE);
 
 -- Email records ----------------------------------------------------------
 INSERT INTO email_records (message_id, sender, sender_name, recipient, subject, body, status, risk_score, risk_level, score_reasons, auth_spf, auth_dkim, auth_dmarc, ai_generated, received_at) VALUES (
@@ -22,26 +22,26 @@ We detected unusual activity. Your account suspended until you verify your ident
 
 Failure to act now will result in permanent closure.
 PayPal Security Team',
-  'quarantined', 100, 'critical', '["Display name impersonates ''paypal'' but domain is ''paypa1-support.com''.", "Urgency / pressure language: account suspended, act now, expire.", "Requests credentials / sensitive data: confirm your password, verify your identity.", "Link points directly to a raw IP address.", "Link text shows ''www.paypal.com'' but actually points to ''198.51.100.23''.", "Copy uses templated phrasing typical of AI-generated / mass phishing."]', 'fail', 'fail', 'fail', TRUE, NOW() - INTERVAL '24 hours');
+  'quarantined', 100, 'critical', '["Display name impersonates ''paypal'' but domain is ''paypa1-support.com''.", "Urgency / pressure language: account suspended, act now, expire.", "Requests credentials / sensitive data: confirm your password, verify your identity.", "Link points directly to a raw IP address.", "Link text shows ''www.paypal.com'' but actually points to ''198.51.100.23''.", "Copy uses templated phrasing typical of AI-generated / mass phishing."]', 'fail', 'fail', 'fail', TRUE, (CURRENT_DATE - INTERVAL '5 days' + INTERVAL '12 hours'));
 INSERT INTO email_records (message_id, sender, sender_name, recipient, subject, body, status, risk_score, risk_level, score_reasons, auth_spf, auth_dkim, auth_dmarc, ai_generated, received_at) VALUES (
   '<sample-2@phishguard.local>', 'rewards@amaz0n-giftcards.net', 'Amazon Rewards', 'staff@phishguard.local', 'Congratulations! You have won a $500 gift card', 'You have won a $500 Amazon gift card! Claim your free prize now before it expires. Click here: http://bit.ly/claim-prize-now and provide your credit card to cover shipping.',
-  'quarantined', 73, 'high', '["Display name impersonates ''amazon'' but domain is ''amaz0n-giftcards.net''.", "Urgency / pressure language: expire.", "Requests credentials / sensitive data: credit card.", "Financial lure / bait: claim your, gift card, prize.", "Uses URL shortener(s): bit.ly."]', 'fail', 'fail', 'fail', FALSE, NOW() - INTERVAL '21 hours');
+  'quarantined', 73, 'high', '["Display name impersonates ''amazon'' but domain is ''amaz0n-giftcards.net''.", "Urgency / pressure language: expire.", "Requests credentials / sensitive data: credit card.", "Financial lure / bait: claim your, gift card, prize.", "Uses URL shortener(s): bit.ly."]', 'fail', 'fail', 'fail', FALSE, (CURRENT_DATE - INTERVAL '4 days' + INTERVAL '12 hours'));
 INSERT INTO email_records (message_id, sender, sender_name, recipient, subject, body, status, risk_score, risk_level, score_reasons, auth_spf, auth_dkim, auth_dmarc, ai_generated, received_at) VALUES (
   '<sample-3@phishguard.local>', 'it-helpdesk@company-secure-verify.com', 'IT Helpdesk', 'jane.staff@phishguard.local', 'Action required: Update your password today', 'Our records show your mailbox is full. To avoid losing emails you must update your password immediately. Log in to http://company-secure-verify.com/reset and confirm your identity. This is a final notice.',
-  'quarantined', 58, 'high', '["Sender domain looks auto-generated / suspicious.", "Urgency / pressure language: action required, final notice, immediately.", "Requests credentials / sensitive data: confirm your identity, log in to, update your password."]', 'fail', 'fail', 'fail', FALSE, NOW() - INTERVAL '18 hours');
+  'quarantined', 58, 'high', '["Sender domain looks auto-generated / suspicious.", "Urgency / pressure language: action required, final notice, immediately.", "Requests credentials / sensitive data: confirm your identity, log in to, update your password."]', 'fail', 'fail', 'fail', FALSE, (CURRENT_DATE - INTERVAL '2 days' + INTERVAL '12 hours'));
 INSERT INTO email_records (message_id, sender, sender_name, recipient, subject, body, status, risk_score, risk_level, score_reasons, auth_spf, auth_dkim, auth_dmarc, ai_generated, received_at) VALUES (
   '<sample-4@phishguard.local>', 'no-reply@micros0ft-alerts.com', 'Microsoft Account Team', 'staff@phishguard.local', 'Unusual sign-in activity detected', 'We detected a sign-in from a new device. If this wasn''t you, verify your account immediately by opening the attached invoice.html file and signing in to restore access.',
-  'quarantined', 55, 'high', '["Display name impersonates ''microsoft'' but domain is ''micros0ft-alerts.com''.", "Urgency / pressure language: immediately.", "Requests credentials / sensitive data: verify your account.", "References risky attachment type(s): .htm, .html.", "Copy uses templated phrasing typical of AI-generated / mass phishing."]', 'fail', 'fail', 'fail', TRUE, NOW() - INTERVAL '15 hours');
+  'quarantined', 55, 'high', '["Display name impersonates ''microsoft'' but domain is ''micros0ft-alerts.com''.", "Urgency / pressure language: immediately.", "Requests credentials / sensitive data: verify your account.", "References risky attachment type(s): .htm, .html.", "Copy uses templated phrasing typical of AI-generated / mass phishing."]', 'fail', 'fail', 'fail', TRUE, (CURRENT_DATE - INTERVAL '0 days' + INTERVAL '12 hours'));
 INSERT INTO email_records (message_id, sender, sender_name, recipient, subject, body, status, risk_score, risk_level, score_reasons, auth_spf, auth_dkim, auth_dmarc, ai_generated, received_at) VALUES (
   '<sample-5@phishguard.local>', 'billing@netfl1x-billing.info', 'Netflix', 'jane.staff@phishguard.local', 'Your payment is overdue - update billing', 'Your membership is on hold because your payment is overdue. Update your billing details now to avoid cancellation. Visit tinyurl.com/netflix-billing and enter your card number to continue watching.',
-  'inbox', 46, 'medium', '["Display name impersonates ''netflix'' but domain is ''netfl1x-billing.info''.", "Requests credentials / sensitive data: card number.", "Uses URL shortener(s): tinyurl.com."]', 'fail', 'fail', 'fail', FALSE, NOW() - INTERVAL '12 hours');
+  'inbox', 46, 'medium', '["Display name impersonates ''netflix'' but domain is ''netfl1x-billing.info''.", "Requests credentials / sensitive data: card number.", "Uses URL shortener(s): tinyurl.com."]', 'fail', 'fail', 'fail', FALSE, (CURRENT_DATE - INTERVAL '3 days' + INTERVAL '12 hours'));
 INSERT INTO email_records (message_id, sender, sender_name, recipient, subject, body, status, risk_score, risk_level, score_reasons, auth_spf, auth_dkim, auth_dmarc, ai_generated, received_at) VALUES (
   '<sample-6@phishguard.local>', 'newsletter@techweekly.com', 'Tech Weekly', 'staff@phishguard.local', 'Your Monday tech digest is here', 'Hi Riley,
 
 Here are this week''s top engineering reads, including a deep dive on Postgres indexing and a guide to FastAPI dependency injection. Read online at https://techweekly.com/digest .
 
 Happy reading!',
-  'inbox', 0, 'low', '["No phishing indicators detected by rule engine."]', 'pass', 'pass', 'pass', FALSE, NOW() - INTERVAL '9 hours');
+  'inbox', 0, 'low', '["No phishing indicators detected by rule engine."]', 'pass', 'pass', 'pass', FALSE, (CURRENT_DATE - INTERVAL '1 days' + INTERVAL '12 hours'));
 INSERT INTO email_records (message_id, sender, sender_name, recipient, subject, body, status, risk_score, risk_level, score_reasons, auth_spf, auth_dkim, auth_dmarc, ai_generated, received_at) VALUES (
   '<sample-7@phishguard.local>', 'hr@phishguard.local', 'PhishGuard HR', 'jane.staff@phishguard.local', 'Reminder: Submit your timesheet by Friday', 'Hi Jane,
 
@@ -49,10 +49,10 @@ This is a friendly reminder to submit your timesheet in the HR portal by end of 
 
 Thanks,
 HR Team',
-  'inbox', 0, 'low', '["No phishing indicators detected by rule engine."]', 'pass', 'pass', 'pass', FALSE, NOW() - INTERVAL '6 hours');
+  'inbox', 0, 'low', '["No phishing indicators detected by rule engine."]', 'pass', 'pass', 'pass', FALSE, (CURRENT_DATE - INTERVAL '5 days' + INTERVAL '12 hours'));
 INSERT INTO email_records (message_id, sender, sender_name, recipient, subject, body, status, risk_score, risk_level, score_reasons, auth_spf, auth_dkim, auth_dmarc, ai_generated, received_at) VALUES (
   '<sample-8@phishguard.local>', 'calendar@phishguard.local', 'Team Calendar', 'staff@phishguard.local', 'Meeting invite: Sprint planning Thursday 10am', 'You''re invited to Sprint Planning on Thursday at 10:00am in Room 4. Agenda and notes are in the shared drive. See you there!',
-  'inbox', 0, 'low', '["No phishing indicators detected by rule engine."]', 'pass', 'pass', 'pass', FALSE, NOW() - INTERVAL '3 hours');
+  'inbox', 0, 'low', '["No phishing indicators detected by rule engine."]', 'pass', 'pass', 'pass', FALSE, (CURRENT_DATE - INTERVAL '3 days' + INTERVAL '12 hours'));
 
 -- One confirmed-phishing analyst review on the highest-risk email ---------
 INSERT INTO analyst_reviews (email_id, analyst_id, action, verdict, feedback) SELECT e.id, u.id, 'confirm_phishing', 'phishing', 'Classic credential-harvesting page, IP-based link.' FROM email_records e, users u WHERE e.message_id = '<sample-1@phishguard.local>' AND u.email = 'analyst@phishguard.local';

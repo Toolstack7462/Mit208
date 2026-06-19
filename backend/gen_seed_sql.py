@@ -7,7 +7,7 @@ import json
 
 from app.scoring import score_email
 from app.security import hash_password
-from app.seed import SAMPLE_EMAILS, USERS
+from app.seed import DAYS_AGO, SAMPLE_EMAILS, USERS
 
 
 def q(s: str) -> str:
@@ -50,7 +50,7 @@ for i, (sender, name, rcpt, subj, body) in enumerate(SAMPLE_EMAILS):
         f"  {q(mid)}, {q(sender)}, {q(name)}, {q(rcpt)}, {q(subj)}, {q(body)},\n"
         f"  {q(status)}, {r.score}, {q(r.level)}, {q(json.dumps(r.reasons))}, "
         f"{q(r.spf)}, {q(r.dkim)}, {q(r.dmarc)}, {str(r.ai_generated).upper()}, "
-        f"NOW() - INTERVAL '{(len(SAMPLE_EMAILS) - i) * 3} hours');"
+        f"(CURRENT_DATE - INTERVAL '{DAYS_AGO[i]} days' + INTERVAL '12 hours'));"
     )
 
 # Worst email -> confirmed phishing review + audit

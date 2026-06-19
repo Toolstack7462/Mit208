@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Search } from "lucide-react";
+import { Search, CheckCircle2 } from "lucide-react";
 import Layout from "../components/Layout";
 import RiskBadge from "../components/RiskBadge";
 import EmailDetailPanel from "../components/EmailDetailPanel";
@@ -79,18 +79,19 @@ export default function Inbox() {
   };
 
   return (
-    <Layout title="Email Inbox" subtitle="Review scored emails and take action">
+    <Layout title="Email Inbox" subtitle={`${emails.length} emails · review scored messages and take action`}>
       {toast && (
-        <div className="fixed right-6 top-6 z-50 rounded-lg bg-navy-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg">
+        <div className="fixed right-8 top-6 z-50 flex items-center gap-2 rounded-lg bg-navy-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
           {toast}
         </div>
       )}
-      <div className="grid h-[calc(100vh-9.5rem)] grid-cols-1 gap-5 lg:grid-cols-[minmax(360px,420px)_1fr]">
+      <div className="grid h-[calc(100vh-9.75rem)] grid-cols-1 gap-6 lg:grid-cols-[minmax(370px,430px)_1fr]">
         {/* List column */}
         <div className="card flex flex-col overflow-hidden">
-          <div className="border-b border-slate-200 p-3">
+          <div className="border-b border-slate-200 p-4">
             <div className="relative mb-3">
-              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <input
                 className="input pl-9"
                 placeholder="Search subject or sender…"
@@ -98,17 +99,19 @@ export default function Inbox() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+            <div className="flex flex-wrap gap-2">
               {FILTER_TABS.map((t) => (
                 <button
                   key={t.key}
                   onClick={() => setTab(t.key)}
-                  className={`flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition ${
-                    tab === t.key ? "bg-white text-navy-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    tab === t.key
+                      ? "bg-brand text-white"
+                      : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   }`}
                 >
                   {t.label}
-                  <span className="ml-1 text-slate-400">{counts[t.key]}</span>
+                  <span className={tab === t.key ? "ml-1.5 opacity-80" : "ml-1.5 text-slate-400"}>{counts[t.key]}</span>
                 </button>
               ))}
             </div>
@@ -120,12 +123,13 @@ export default function Inbox() {
             )}
             {filtered.map((e) => {
               const status = STATUS_META[e.status] || STATUS_META.inbox;
+              const active = selectedId === e.id;
               return (
                 <button
                   key={e.id}
                   onClick={() => setSelectedId(e.id)}
-                  className={`block w-full px-4 py-3 text-left transition hover:bg-slate-50 ${
-                    selectedId === e.id ? "bg-brand/5 ring-1 ring-inset ring-brand/20" : ""
+                  className={`block w-full border-l-[3px] px-4 py-3.5 text-left transition ${
+                    active ? "border-brand bg-brand/5" : "border-transparent hover:bg-slate-50"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -135,11 +139,12 @@ export default function Inbox() {
                     <span className="shrink-0 text-[11px] text-slate-400">{formatDate(e.received_at)}</span>
                   </div>
                   <div className="mt-0.5 truncate text-sm text-slate-600">{e.subject}</div>
-                  <div className="mt-1.5 flex items-center gap-2">
+                  <div className="mt-2 flex items-center gap-2">
                     <RiskBadge level={e.risk_level} score={e.risk_score} showScore />
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${status.cls}`}>
-                      {status.label}
-                    </span>
+                    <span className={`badge ${status.cls}`}>{status.label}</span>
+                    {e.ai_generated && (
+                      <span className="badge bg-violet-50 text-violet-700 ring-1 ring-violet-200">AI-Gen</span>
+                    )}
                   </div>
                 </button>
               );

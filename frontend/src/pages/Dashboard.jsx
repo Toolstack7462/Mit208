@@ -4,9 +4,33 @@ import { Mail, ShieldAlert, AlertOctagon, Clock, ArrowUpRight } from "lucide-rea
 import Layout from "../components/Layout";
 import RiskBadge from "../components/RiskBadge";
 import Donut from "../components/Donut";
+import BarChart from "../components/BarChart";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
-import { CATEGORY_META, formatDate } from "../lib/risk";
+import { CATEGORY_META, formatDate, riskCategory } from "../lib/risk";
+
+// Bucket emails into the last 7 calendar days, grouped by risk category.
+function weeklyDistribution(emails) {
+  const now = new Date();
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    days.push({
+      key: d.toDateString(),
+      label: d.toLocaleDateString(undefined, { weekday: "short" }),
+      high: 0,
+      uncertain: 0,
+      safe: 0,
+    });
+  }
+  emails.forEach((e) => {
+    const ed = new Date(e.received_at);
+    const key = new Date(ed.getFullYear(), ed.getMonth(), ed.getDate()).toDateString();
+    const day = days.find((x) => x.key === key);
+    if (day) day[riskCategory(e.risk_level)] += 1;
+  });
+  return days;
+}
 
 function StatCard({ icon: Icon, label, value, hint, tone }) {
   const tones = {
@@ -33,9 +57,11 @@ export default function Dashboard() {
   const { user, isAnalyst } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
+  const [emails, setEmails] = useState([]);
 
   useEffect(() => {
     api.get("/api/dashboard/stats").then((r) => setStats(r.data));
+    api.get("/api/emails").then((r) => setEmails(r.data)).catch(() => {});
   }, []);
 
   if (!stats) {
@@ -66,6 +92,13 @@ export default function Dashboard() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-5">
+          {/* Weekly threat distribution */}
+          <div className="card p-6 lg:col-span-3">
+            <h3 className="text-base font-bold text-navy-900">Weekly Threat Distribution</h3>
+            <p className="mb-4 text-sm text-slate-400">Emails received over the last 7 days</p>
+            <BarChart data={weeklyDistribution(emails)} />
+          </div>
+
           {/* Threat category distribution */}
           <div className="card p-6 lg:col-span-2">
             <h3 className="text-base font-bold text-navy-900">Threat Category Distribution</h3>
@@ -95,9 +128,10 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Recent high risk */}
-          <div className="card p-6 lg:col-span-3">
+        {/* Recent high risk */}
+        <div className="card p-6">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-base font-bold text-navy-900">Recent High-Risk Emails</h3>
               {isAnalyst && (
@@ -133,7 +167,6 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
-          </div>
         </div>
       </div>
     </Layout>

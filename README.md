@@ -80,7 +80,7 @@ Mit208/
 │       ├── context/        # Authentication context
 │       └── lib/            # Risk-level mapping helpers
 ├── database/               # schema.sql, seed_data.sql, sample_emails.json
-├── docs/screenshots/
+├── screenshots/            # UI and API documentation screenshots
 └── README.md
 ```
 
@@ -114,6 +114,12 @@ cd Mit208
 ## Database Setup
 
 PhishGuard reads its connection string from `DATABASE_URL` in `backend/.env`.
+A template is provided as `backend/.env.example` — copy it to `backend/.env`
+and adjust as needed. The `.env` file is excluded from version control; only
+`.env.example` is committed.
+
+PostgreSQL is the official target database. SQLite is supported only as a
+zero-install fallback for quick local testing.
 
 ### PostgreSQL (recommended)
 
@@ -195,7 +201,8 @@ Open http://localhost:5173 and sign in with one of the accounts below.
 | Staff | `jane.staff@phishguard.local` | `Staff@123` |
 | Admin | `admin@phishguard.local` | `Admin@123` |
 
-All email addresses use the non-routable `.local` domain.
+All email addresses use the non-routable `.local` domain. These demo passwords
+are for local testing only and are stored in the database as bcrypt hashes.
 
 ---
 
@@ -245,6 +252,18 @@ Primary endpoint groups:
 | `/api/release-requests` | Create and decide staff release requests |
 | `/api/audit-logs` | Read the audit trail |
 | `/api/dashboard` | Aggregate dashboard statistics |
+| `/health` | Application status and live database-connectivity check |
+| `/system/database-status` | Reports the active engine (PostgreSQL or SQLite fallback) |
+
+Example status responses:
+
+```bash
+curl http://localhost:8000/health
+# {"status":"ok","app":"PhishGuard API","version":"1.0.0","database_connected":true}
+
+curl http://localhost:8000/system/database-status
+# {"engine":"postgresql","type":"PostgreSQL","using_fallback":false,...}
+```
 
 An end-to-end check of the workflow is available in `backend/smoke_test.py` and
 can be run while the backend is active.
@@ -255,15 +274,19 @@ can be run while the backend is active.
 
 | Login | Dashboard |
 |-------|-----------|
-| ![Login](docs/screenshots/login.png) | ![Dashboard](docs/screenshots/dashboard.png) |
+| ![Login](screenshots/login.png) | ![Dashboard](screenshots/dashboard.png) |
 
-| Email Inbox and Detail | Staff Portal |
-|------------------------|--------------|
-| ![Email detail](docs/screenshots/email-detail.png) | ![Staff portal](docs/screenshots/staff-portal.png) |
+| Email Inbox | Email Detail |
+|-------------|--------------|
+| ![Email inbox](screenshots/email-inbox.png) | ![Email detail](screenshots/email-detail.png) |
 
-| Audit Logs | Release Requests |
-|------------|------------------|
-| ![Audit logs](docs/screenshots/audit-logs.png) | ![Release requests](docs/screenshots/release-requests.png) |
+| Staff Portal | Release Requests |
+|--------------|------------------|
+| ![Staff portal](screenshots/staff-portal.png) | ![Release requests](screenshots/release-requests.png) |
+
+| Audit Logs | API Documentation |
+|------------|-------------------|
+| ![Audit logs](screenshots/audit-logs.png) | ![FastAPI docs](screenshots/fastapi-docs.png) |
 
 ---
 

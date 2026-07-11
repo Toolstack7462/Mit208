@@ -270,6 +270,26 @@ can be run while the backend is active.
 
 ---
 
+## Testing
+
+Two complementary test layers are provided:
+
+| Layer | File(s) | What it covers |
+|-------|---------|----------------|
+| Automated unit + API tests | `backend/tests/` (pytest) | 29 tests: rule-engine scoring, JWT auth, role-based access, email actions, release-request workflow, dashboard and audit logging |
+| End-to-end smoke test | `backend/smoke_test.py` | 11 live checks against a running server |
+
+The pytest suite runs against an **isolated in-memory SQLite database** (it never
+touches `phishguard.db`), so it is safe to run at any time and requires no server:
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+python -m pytest            # 29 passed
+```
+
+---
+
 ## Screenshots
 
 | Login | Dashboard |
@@ -296,7 +316,8 @@ can be run while the backend is active.
   rule-based score. The integration point is defined in `backend/app/ml_model.py`.
 - Connect to a live mail source for real-time ingestion.
 - Add analytics over a longer time range and exportable reports.
-- Expand automated test coverage across the API and frontend.
+- Expand automated test coverage to the React frontend (the backend already has
+  a 29-test pytest suite; see the Testing section).
 
 ---
 

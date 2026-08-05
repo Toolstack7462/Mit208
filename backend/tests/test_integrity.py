@@ -300,3 +300,105 @@ def test_the_api_decision_path_satisfies_the_constraint(client, staff_headers, a
                       json={"status": "approved", "review_note": "Verified."})
     assert dec.status_code == 200
     assert dec.json()["reviewed_by"] is not None
+
+
+# --- Concurrency: the race the partial unique index exists to stop -----------
+
+def test_a_concurrent_duplicate_request_gets_409_not_503(client, staff_headers, monkeypatch):
+    """The duplicate pre-check and the INSERT are two statements, so a concurrent
+    request can commit its own pending row in between.
+
+    The index correctly rejects the loser, but that arrived as a generic 503
+    "the database could not complete this request, please try again" — the wrong
+    status, and misleading advice, because retrying can never succeed. It must be
+    the same 409 a sequential duplicate receives.
+
+    Found by running this suite against real PostgreSQL; see docs/BUG_LOG.md
+    BUG-16.
+    """
+    import app.routers.requests as req_router
+
+    rows = client.get("/api/emails", headers=staff_headers).json()
+    eid = next(e for e in rows if e["status"] == "quarantined")["id"]
+    reason = "I was expecting this invoice from our supplier."
+
+    first = client.post("/api/release-requests", headers=staff_headers,
+                        json={"email_id": eid, "reason": reason})
+    assert first.status_code == 201
+
+    # Reproduce the race window: the pre-check reports "no open request" even
+    # though one has just been committed by another worker.
+    monkeypatch.setattr(req_router, "find_open_request", lambda *a, **k: None)
+
+    second = client.post("/api/release-requests", headers=staff_headers,
+                         json={"email_id": eid, "reason": reason})
+    assert second.status_code == 409, (
+        f"expected 409 from the index violation, got {second.status_code}"
+    )
+    assert "already have a pending" in second.json()["error"]["message"]
+
+
+def test_the_losing_concurrent_request_writes_nothing(client, staff_headers, monkeypatch):
+    """The rejected attempt must not leave a row or an audit entry behind."""
+    import app.routers.requests as req_router
+
+    rows = client.get("/api/emails", headers=staff_headers).json()
+    eid = next(e for e in rows if e["status"] == "quarantined")["id"]
+    reason = "I was expecting this invoice from our supplier."
+
+    client.post("/api/release-requests", headers=staff_headers,
+                json={"email_id": eid, "reason": reason})
+    monkeypatch.setattr(req_router, "find_open_request", lambda *a, **k: None)
+    client.post("/api/release-requests", headers=staff_headers,
+                json={"email_id": eid, "reason": reason})
+    monkeypatch.undo()
+
+    mine = [r for r in client.get("/api/release-requests", headers=staff_headers).json()
+            if r["email_id"] == eid and r["status"] == "pending"]
+    assert len(mine) == 1, "the losing request left a row behind"
+
+
+def test_an_unrelated_integrity_error_is_not_masked_as_a_duplicate(client, staff_headers,
+                                                                   monkeypatch):
+    """Only the pending-request index maps to 409. Any other integrity failure
+    must keep its own handling rather than being mislabelled."""
+    import app.routers.requests as req_router
+    from sqlalchemy.exc import IntegrityError
+
+    rows = client.get("/api/emails", headers=staff_headers).json()
+    eid = next(e for e in rows if e["status"] == "quarantined")["id"]
+
+    def _boom(*args, **kwargs):
+        raise IntegrityError("INSERT ...", {}, Exception("some other constraint"))
+
+    monkeypatch.setattr(req_router, "record_audit", _boom)
+
+    from fastapi.testclient import TestClient
+    from app.main import app
+    with TestClient(app, raise_server_exceptions=False) as failing:
+        r = failing.post("/api/release-requests", headers=staff_headers,
+                         json={"email_id": eid,
+                               "reason": "I was expecting this vendor invoice."})
+    assert r.status_code != 409, "an unrelated integrity error must not read as a duplicate"
+    assert r.status_code >= 500
+
+
+@pytest.mark.parametrize("driver_message,expected", [
+    # PostgreSQL names the index...
+    ('duplicate key value violates unique constraint '
+     '"uq_request_one_pending_per_email_user"', True),
+    # ...while SQLite names the columns instead. Matching only one of these left
+    # the fix working on PostgreSQL and broken on SQLite.
+    ("UNIQUE constraint failed: staff_release_requests.email_id, "
+     "staff_release_requests.requested_by", True),
+    # Anything else must not be mistaken for a duplicate request.
+    ('duplicate key value violates unique constraint "users_email_key"', False),
+    ("null value in column \"reason\" violates not-null constraint", False),
+    ('new row violates check constraint "ck_request_status"', False),
+])
+def test_pending_request_conflict_is_recognised_on_both_engines(driver_message, expected):
+    """Both drivers' wording must be recognised, and nothing else."""
+    from sqlalchemy.exc import IntegrityError as IE
+    from app.routers.requests import is_pending_request_conflict
+    exc = IE("INSERT ...", {}, Exception(driver_message))
+    assert is_pending_request_conflict(exc) is expected

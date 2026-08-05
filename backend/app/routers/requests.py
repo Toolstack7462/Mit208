@@ -2,6 +2,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..audit import record_audit
@@ -17,6 +18,45 @@ REVIEWER = require_roles("analyst", "admin")
 # Statuses that mean "the recipient cannot read this email yet", i.e. the only
 # states from which a release request is meaningful.
 HOLDABLE_STATUSES = ("quarantined", "confirmed_phishing")
+
+DUPLICATE_REQUEST_MESSAGE = "You already have a pending release request for this email."
+
+# Name of the partial unique index that enforces the same rule in the database.
+PENDING_REQUEST_INDEX = "uq_request_one_pending_per_email_user"
+
+
+def is_pending_request_conflict(exc: IntegrityError) -> bool:
+    """True when this IntegrityError is the pending-request index firing.
+
+    The two engines describe the same violation differently, so matching on one
+    of them is not enough:
+
+      PostgreSQL: duplicate key value violates unique constraint
+                  "uq_request_one_pending_per_email_user"
+      SQLite:     UNIQUE constraint failed:
+                  staff_release_requests.email_id, staff_release_requests.requested_by
+
+    PostgreSQL names the index; SQLite names the columns. Accept either. The
+    column pair is specific enough because this index is the only unique
+    constraint on the table covering both columns.
+    """
+    text = str(getattr(exc, "orig", exc)).lower()
+    if PENDING_REQUEST_INDEX in text:
+        return True
+    return "email_id" in text and "requested_by" in text
+
+
+def find_open_request(db: Session, email_id: int, user_id: int) -> StaffReleaseRequest | None:
+    """Return this user's pending request for the email, if one exists."""
+    return (
+        db.query(StaffReleaseRequest)
+        .filter(
+            StaffReleaseRequest.email_id == email_id,
+            StaffReleaseRequest.requested_by == user_id,
+            StaffReleaseRequest.status == "pending",
+        )
+        .first()
+    )
 
 
 def _client_ip(request: Request) -> str | None:
@@ -66,33 +106,34 @@ def create_request(
 
     # One open request per email per user. Re-submitting used to create an
     # unlimited number of identical pending rows for the same email.
-    existing = (
-        db.query(StaffReleaseRequest)
-        .filter(
-            StaffReleaseRequest.email_id == payload.email_id,
-            StaffReleaseRequest.requested_by == current.id,
-            StaffReleaseRequest.status == "pending",
-        )
-        .first()
-    )
-    if existing:
-        raise HTTPException(
-            status_code=409,
-            detail="You already have a pending release request for this email.",
-        )
+    if find_open_request(db, payload.email_id, current.id):
+        raise HTTPException(status_code=409, detail=DUPLICATE_REQUEST_MESSAGE)
 
     req = StaffReleaseRequest(
         email_id=payload.email_id, requested_by=current.id,
         reason=payload.reason, status="pending",
     )
     db.add(req)
-    db.flush()
-    record_audit(
-        db, user=current, action="release_request_created", entity_type="release_request",
-        entity_id=req.id, details=f"Requested release of email '{email.subject}'",
-        ip_address=_client_ip(request),
-    )
-    db.commit()
+    try:
+        db.flush()
+        record_audit(
+            db, user=current, action="release_request_created", entity_type="release_request",
+            entity_id=req.id, details=f"Requested release of email '{email.subject}'",
+            ip_address=_client_ip(request),
+        )
+        db.commit()
+    except IntegrityError as exc:
+        # The check above and this INSERT are two statements, so a concurrent
+        # request can commit its own pending row in between. The partial unique
+        # index then rejects this one — correctly, but the generic database
+        # handler reported it as 503 "please try again", which is both the wrong
+        # status and misleading advice: retrying can never succeed. Translate it
+        # into the same 409 a sequential duplicate receives.
+        db.rollback()
+        if is_pending_request_conflict(exc):
+            raise HTTPException(status_code=409, detail=DUPLICATE_REQUEST_MESSAGE) from exc
+        raise
+
     db.refresh(req)
     return _to_out(req)
 

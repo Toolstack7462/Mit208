@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ShieldCheck, Activity, ScrollText } from "lucide-react";
 import Layout from "../components/Layout";
 import api from "../api";
 import { formatDate } from "../lib/risk";
+import { errorMessage, errorRequestId } from "../lib/errors";
+import { ErrorBlock, LoadingBlock } from "../components/StateBlock";
 
 const ACTION_CLS = {
   login: "bg-slate-100 text-slate-600",
@@ -19,10 +21,28 @@ const ACTION_CLS = {
 export default function AuditLogs() {
   const [logs, setLogs] = useState([]);
   const [filter, setFilter] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // This request previously had no failure path at all: if it rejected, the
+  // promise was unhandled and the page silently rendered "No audit entries",
+  // which is exactly the wrong message when the API is simply unreachable.
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await api.get("/api/audit-logs");
+      setLogs(r.data);
+    } catch (err) {
+      setError({ message: errorMessage(err), requestId: errorRequestId(err) });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    api.get("/api/audit-logs").then((r) => setLogs(r.data));
-  }, []);
+    load();
+  }, [load]);
 
   const actions = ["", ...Array.from(new Set(logs.map((l) => l.action)))];
   const rows = filter ? logs.filter((l) => l.action === filter) : logs;
@@ -77,8 +97,21 @@ export default function AuditLogs() {
         <span className="text-sm text-slate-400">{rows.length} entries</span>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      {error && (
+        <div className="card overflow-hidden">
+          <ErrorBlock message={error.message} requestId={error.requestId} onRetry={load} />
+        </div>
+      )}
+
+      {!error && loading && (
+        <div className="card overflow-hidden">
+          <LoadingBlock label="Loading audit trail…" />
+        </div>
+      )}
+
+      {!error && !loading && (
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[52rem] text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-5 py-3.5">Time</th>
@@ -114,6 +147,7 @@ export default function AuditLogs() {
           </tbody>
         </table>
       </div>
+      )}
     </Layout>
   );
 }

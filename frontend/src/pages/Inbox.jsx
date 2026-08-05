@@ -1,10 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
-import { Search, CheckCircle2 } from "lucide-react";
+import { Search } from "lucide-react";
 import Layout from "../components/Layout";
+import { Toast, useToast } from "../components/Toast";
 import RiskBadge from "../components/RiskBadge";
 import EmailDetailPanel from "../components/EmailDetailPanel";
 import api from "../api";
 import { riskCategory, FILTER_TABS, STATUS_META, formatDate } from "../lib/risk";
+import { errorMessage, errorRequestId } from "../lib/errors";
+import { ErrorBlock, LoadingBlock } from "../components/StateBlock";
 
 export default function Inbox() {
   const [emails, setEmails] = useState([]);
@@ -14,7 +17,9 @@ export default function Inbox() {
   const [detail, setDetail] = useState(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [toast, setToast] = useState("");
+  const { toast, show: flash } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const loadList = useCallback(async () => {
     const r = await api.get("/api/emails");
@@ -22,23 +27,45 @@ export default function Inbox() {
     return r.data;
   }, []);
 
-  useEffect(() => {
-    loadList().then((data) => {
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await loadList();
       if (data.length) setSelectedId((id) => id ?? data[0].id);
-    });
+    } catch (err) {
+      setError({ message: errorMessage(err), requestId: errorRequestId(err) });
+    } finally {
+      setLoading(false);
+    }
   }, [loadList]);
 
   useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  useEffect(() => {
     if (selectedId == null) return;
-    api.get(`/api/emails/${selectedId}`).then((r) => setDetail(r.data));
+    let cancelled = false;
+    api.get(`/api/emails/${selectedId}`).then(
+      (r) => {
+        if (!cancelled) setDetail(r.data);
+      },
+      (err) => {
+        if (!cancelled) {
+          setDetail(null);
+          flash(errorMessage(err, "Could not open that email"), "error");
+        }
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
   }, [selectedId]);
 
-  function flash(msg) {
-    setToast(msg);
-    setTimeout(() => setToast(""), 2500);
-  }
 
   async function handleAction(action, payload) {
+    if (!detail) return;
     if (action === "copy-id") {
       navigator.clipboard?.writeText(detail.message_id);
       setCopied(true);
@@ -58,7 +85,7 @@ export default function Inbox() {
       };
       flash(labels[action] || "Action recorded");
     } catch (err) {
-      flash(err?.response?.data?.detail || "Action failed");
+      flash(errorMessage(err, "Action failed"), "error");
     } finally {
       setBusy(false);
     }
@@ -80,12 +107,7 @@ export default function Inbox() {
 
   return (
     <Layout title="Email Inbox" subtitle={`${emails.length} emails · review scored messages and take action`}>
-      {toast && (
-        <div className="fixed right-8 top-6 z-50 flex items-center gap-2 rounded-lg bg-navy-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg">
-          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-          {toast}
-        </div>
-      )}
+      <Toast message={toast.message} tone={toast.tone} />
       <div className="grid h-[calc(100vh-9.75rem)] grid-cols-1 gap-6 lg:grid-cols-[minmax(370px,430px)_1fr]">
         {/* List column */}
         <div className="card flex flex-col overflow-hidden">
@@ -118,10 +140,14 @@ export default function Inbox() {
           </div>
 
           <div className="flex-1 divide-y divide-slate-100 overflow-y-auto">
-            {filtered.length === 0 && (
+            {error && (
+              <ErrorBlock message={error.message} requestId={error.requestId} onRetry={refresh} />
+            )}
+            {!error && loading && <LoadingBlock label="Loading emails…" />}
+            {!error && !loading && filtered.length === 0 && (
               <div className="p-8 text-center text-sm text-slate-400">No emails in this view.</div>
             )}
-            {filtered.map((e) => {
+            {!error && !loading && filtered.map((e) => {
               const status = STATUS_META[e.status] || STATUS_META.inbox;
               const active = selectedId === e.id;
               return (

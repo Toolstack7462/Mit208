@@ -1,10 +1,22 @@
 import { useEffect, useState, useCallback } from "react";
-import { Mail, ShieldAlert, SendHorizontal, CheckCircle2 } from "lucide-react";
+import { Mail, ShieldAlert, SendHorizontal } from "lucide-react";
 import Layout from "../components/Layout";
+import { Toast, useToast } from "../components/Toast";
 import RiskBadge from "../components/RiskBadge";
 import EmailDetailPanel from "../components/EmailDetailPanel";
 import api from "../api";
 import { STATUS_META, formatDate } from "../lib/risk";
+import { errorMessage, errorRequestId } from "../lib/errors";
+import { ErrorBlock, LoadingBlock } from "../components/StateBlock";
+
+// Mirrors the backend rule (ReleaseRequestCreate.reason, min_length=10) so the
+// user is told what is wrong before the request is sent.
+const MIN_REASON_LENGTH = 10;
+const MAX_REASON_LENGTH = 2000;
+
+// Only these statuses mean the email is being withheld, so only these can be
+// the subject of a release request. Mirrors HOLDABLE_STATUSES in the backend.
+const HELD_STATUSES = ["quarantined", "confirmed_phishing"];
 
 function MiniStat({ icon: Icon, label, value, tone }) {
   const tones = {
@@ -32,34 +44,65 @@ export default function StaffPortal() {
   const [detail, setDetail] = useState(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [toast, setToast] = useState("");
+  const { toast, show: flash } = useToast();
   const [reasonFor, setReasonFor] = useState(null);
   const [reason, setReason] = useState("");
+  const [reasonError, setReasonError] = useState("");
+  const [openRequestIds, setOpenRequestIds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const loadList = useCallback(async () => {
     const [er, rr] = await Promise.all([api.get("/api/emails"), api.get("/api/release-requests")]);
     setEmails(er.data);
     setPending(rr.data.filter((r) => r.status === "pending").length);
+    // Track which emails already have an open request so the button can be
+    // disabled instead of letting the user hit the backend's 409.
+    setOpenRequestIds(rr.data.filter((r) => r.status === "pending").map((r) => r.email_id));
     return er.data;
   }, []);
 
-  useEffect(() => {
-    loadList().then((data) => {
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await loadList();
       if (data.length) setSelectedId((id) => id ?? data[0].id);
-    });
+    } catch (err) {
+      setError({ message: errorMessage(err), requestId: errorRequestId(err) });
+    } finally {
+      setLoading(false);
+    }
   }, [loadList]);
 
   useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  useEffect(() => {
     if (selectedId == null) return;
-    api.get(`/api/emails/${selectedId}`).then((r) => setDetail(r.data));
+    let cancelled = false;
+    api.get(`/api/emails/${selectedId}`).then(
+      (r) => {
+        if (!cancelled) setDetail(r.data);
+      },
+      (err) => {
+        // A failed detail fetch used to reject unhandled and leave the panel
+        // showing the previously selected email.
+        if (!cancelled) {
+          setDetail(null);
+          flash(errorMessage(err, "Could not open that email"), "error");
+        }
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
   }, [selectedId]);
 
-  function flash(msg) {
-    setToast(msg);
-    setTimeout(() => setToast(""), 2500);
-  }
 
   function handleAction(action) {
+    if (!detail) return;
     if (action === "copy-id") {
       navigator.clipboard?.writeText(detail.message_id);
       setCopied(true);
@@ -67,20 +110,44 @@ export default function StaffPortal() {
       return;
     }
     if (action === "request-release") {
+      if (!HELD_STATUSES.includes(detail.status)) {
+        flash("This email is not being held, so it does not need releasing.", "error");
+        return;
+      }
+      if (openRequestIds.includes(detail.id)) {
+        flash("You already have a pending release request for this email.", "error");
+        return;
+      }
       setReason("");
+      setReasonError("");
       setReasonFor(detail);
     }
   }
 
+  function validateReason(text) {
+    const trimmed = text.trim();
+    if (trimmed.length === 0) return "Please explain why this email should be released.";
+    if (trimmed.length < MIN_REASON_LENGTH)
+      return `Please give at least ${MIN_REASON_LENGTH} characters so the analyst can assess it.`;
+    if (trimmed.length > MAX_REASON_LENGTH)
+      return `Please keep this under ${MAX_REASON_LENGTH} characters.`;
+    return "";
+  }
+
   async function submitRequest() {
+    const problem = validateReason(reason);
+    if (problem) {
+      setReasonError(problem);
+      return;
+    }
     setBusy(true);
     try {
-      await api.post("/api/release-requests", { email_id: reasonFor.id, reason });
+      await api.post("/api/release-requests", { email_id: reasonFor.id, reason: reason.trim() });
       setReasonFor(null);
       await loadList();
       flash("Release request submitted to analysts");
     } catch (err) {
-      flash(err?.response?.data?.detail || "Could not submit request");
+      setReasonError(errorMessage(err, "Could not submit request"));
     } finally {
       setBusy(false);
     }
@@ -90,12 +157,7 @@ export default function StaffPortal() {
 
   return (
     <Layout title="Staff Portal" subtitle="Your mailbox — request release of held emails you trust">
-      {toast && (
-        <div className="fixed right-8 top-6 z-50 flex items-center gap-2 rounded-lg bg-navy-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg">
-          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-          {toast}
-        </div>
-      )}
+      <Toast message={toast.message} tone={toast.tone} />
 
       <div className="mb-6 grid gap-5 sm:grid-cols-3">
         <MiniStat icon={Mail} label="Emails in your mailbox" value={emails.length} tone="blue" />
@@ -109,10 +171,14 @@ export default function StaffPortal() {
             <span className="section-label">My Emails</span>
           </div>
           <div className="flex-1 divide-y divide-slate-100 overflow-y-auto">
-            {emails.length === 0 && (
+            {error && (
+              <ErrorBlock message={error.message} requestId={error.requestId} onRetry={refresh} />
+            )}
+            {!error && loading && <LoadingBlock label="Loading your mailbox…" />}
+            {!error && !loading && emails.length === 0 && (
               <div className="p-8 text-center text-sm text-slate-400">Your mailbox is empty.</div>
             )}
-            {emails.map((e) => {
+            {!error && !loading && emails.map((e) => {
               const status = STATUS_META[e.status] || STATUS_META.inbox;
               const active = selectedId === e.id;
               return (
@@ -161,15 +227,41 @@ export default function StaffPortal() {
               <div className="font-medium text-navy-900">{reasonFor.subject}</div>
               <div className="text-xs text-slate-400">{reasonFor.sender}</div>
             </div>
+            <label className="sr-only" htmlFor="release-reason">Reason for release</label>
             <textarea
+              id="release-reason"
               className="input mt-3 min-h-[90px] resize-y"
               placeholder="e.g. I was expecting this invoice from our vendor…"
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
+              maxLength={MAX_REASON_LENGTH}
+              aria-invalid={Boolean(reasonError)}
+              aria-describedby={reasonError ? "release-reason-error" : "release-reason-hint"}
+              onChange={(e) => {
+                setReason(e.target.value);
+                if (reasonError) setReasonError("");
+              }}
             />
+            <div className="mt-1.5 flex items-start justify-between gap-3">
+              {reasonError ? (
+                <p id="release-reason-error" role="alert" className="text-xs font-medium text-red-600">
+                  {reasonError}
+                </p>
+              ) : (
+                <p id="release-reason-hint" className="text-xs text-slate-400">
+                  At least {MIN_REASON_LENGTH} characters.
+                </p>
+              )}
+              <span className="shrink-0 text-xs text-slate-400">
+                {reason.trim().length}/{MAX_REASON_LENGTH}
+              </span>
+            </div>
             <div className="mt-4 flex justify-end gap-2">
               <button className="btn-ghost btn-sm" onClick={() => setReasonFor(null)}>Cancel</button>
-              <button className="btn-primary btn-sm" disabled={busy} onClick={submitRequest}>
+              <button
+                className="btn-primary btn-sm"
+                disabled={busy || reason.trim().length < MIN_REASON_LENGTH}
+                onClick={submitRequest}
+              >
                 Submit Request
               </button>
             </div>

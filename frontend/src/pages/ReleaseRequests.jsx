@@ -1,9 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
-import { Check, X, Clock, CheckCircle2 } from "lucide-react";
+import { Check, X, Clock } from "lucide-react";
 import Layout from "../components/Layout";
+import { Toast, useToast } from "../components/Toast";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import { formatDate } from "../lib/risk";
+import { errorMessage, errorRequestId } from "../lib/errors";
+import { ErrorBlock, LoadingBlock } from "../components/StateBlock";
 
 const STATUS = {
   pending: { cls: "bg-amber-50 text-amber-700 ring-1 ring-amber-200", Icon: Clock, label: "Pending" },
@@ -15,21 +18,27 @@ export default function ReleaseRequests() {
   const { isAnalyst } = useAuth();
   const [rows, setRows] = useState([]);
   const [busyId, setBusyId] = useState(null);
-  const [toast, setToast] = useState("");
+  const { toast, show: flash } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const load = useCallback(async () => {
-    const r = await api.get("/api/release-requests");
-    setRows(r.data);
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await api.get("/api/release-requests");
+      setRows(r.data);
+    } catch (err) {
+      setError({ message: errorMessage(err), requestId: errorRequestId(err) });
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  function flash(msg) {
-    setToast(msg);
-    setTimeout(() => setToast(""), 2500);
-  }
 
   async function decide(id, status) {
     setBusyId(id);
@@ -38,7 +47,7 @@ export default function ReleaseRequests() {
       await load();
       flash(`Request ${status}`);
     } catch (err) {
-      flash(err?.response?.data?.detail || "Action failed");
+      flash(errorMessage(err, "Action failed"), "error");
     } finally {
       setBusyId(null);
     }
@@ -51,12 +60,7 @@ export default function ReleaseRequests() {
       title="Release Requests"
       subtitle={isAnalyst ? "Review staff requests to release quarantined email" : "Track your release requests"}
     >
-      {toast && (
-        <div className="fixed right-8 top-6 z-50 flex items-center gap-2 rounded-lg bg-navy-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg">
-          <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-          {toast}
-        </div>
-      )}
+      <Toast message={toast.message} tone={toast.tone} />
 
       {isAnalyst && (
         <div className="mb-5 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
@@ -67,8 +71,21 @@ export default function ReleaseRequests() {
         </div>
       )}
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      {error && (
+        <div className="card overflow-hidden">
+          <ErrorBlock message={error.message} requestId={error.requestId} onRetry={load} />
+        </div>
+      )}
+
+      {!error && loading && (
+        <div className="card overflow-hidden">
+          <LoadingBlock label="Loading release requests…" />
+        </div>
+      )}
+
+      {!error && !loading && (
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[44rem] text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-5 py-3.5">Email</th>
@@ -126,6 +143,7 @@ export default function ReleaseRequests() {
           </tbody>
         </table>
       </div>
+      )}
     </Layout>
   );
 }

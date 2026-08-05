@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, ShieldAlert, AlertOctagon, Clock, ArrowUpRight } from "lucide-react";
 import Layout from "../components/Layout";
@@ -8,6 +8,8 @@ import BarChart from "../components/BarChart";
 import api from "../api";
 import { useAuth } from "../context/AuthContext";
 import { CATEGORY_META, formatDate, riskCategory } from "../lib/risk";
+import { errorMessage, errorRequestId } from "../lib/errors";
+import { ErrorBlock, LoadingBlock } from "../components/StateBlock";
 
 // Bucket emails into the last 7 calendar days, grouped by risk category.
 function weeklyDistribution(emails) {
@@ -58,23 +60,58 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [emails, setEmails] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    api.get("/api/dashboard/stats").then((r) => setStats(r.data));
-    api.get("/api/emails").then((r) => setEmails(r.data)).catch(() => {});
+  // The stats request previously had no rejection handler, so any failure left
+  // `stats` null and the page stuck on "Loading…" indefinitely.
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [s, e] = await Promise.all([
+        api.get("/api/dashboard/stats"),
+        api.get("/api/emails"),
+      ]);
+      setStats(s.data);
+      setEmails(e.data);
+    } catch (err) {
+      setError({ message: errorMessage(err), requestId: errorRequestId(err) });
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  if (!stats) {
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (loading) {
     return (
       <Layout title="Dashboard" subtitle="Loading…">
-        <div className="text-slate-400">Loading…</div>
+        <div className="card"><LoadingBlock label="Loading dashboard statistics…" /></div>
       </Layout>
     );
   }
 
-  const high = (stats.by_level.high || 0) + (stats.by_level.critical || 0);
-  const uncertain = stats.by_level.medium || 0;
-  const safe = stats.by_level.low || 0;
+  if (error || !stats) {
+    return (
+      <Layout title="Dashboard" subtitle="Unable to load statistics">
+        <div className="card">
+          <ErrorBlock
+            message={error?.message || "No dashboard statistics were returned."}
+            requestId={error?.requestId}
+            onRetry={load}
+          />
+        </div>
+      </Layout>
+    );
+  }
+
+  const byLevel = stats.by_level || {};
+  const high = (byLevel.high || 0) + (byLevel.critical || 0);
+  const uncertain = byLevel.medium || 0;
+  const safe = byLevel.low || 0;
   const segments = [
     { label: "High Risk", value: high, color: CATEGORY_META.high.hex },
     { label: "Uncertain", value: uncertain, color: CATEGORY_META.uncertain.hex },

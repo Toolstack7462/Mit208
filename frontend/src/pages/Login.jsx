@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShieldCheck, Loader2, Mail, Lock, Inbox, Activity, Eye, ScrollText } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { errorMessage } from "../lib/errors";
 
 const DEMO = [
   { role: "Analyst", email: "analyst@phishguard.local", password: "Analyst@123" },
@@ -32,7 +33,7 @@ export default function Login() {
       await login(email, password);
       navigate("/dashboard");
     } catch (err) {
-      setError(err?.response?.data?.detail || "Login failed. Check your credentials.");
+      setError(errorMessage(err, "Login failed. Check your credentials."));
     } finally {
       setBusy(false);
     }
@@ -92,12 +93,17 @@ export default function Login() {
 
             <form onSubmit={submit} className="mt-6 space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Email Address</label>
+                <label htmlFor="login-email" className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Email Address
+                </label>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <input
+                    id="login-email"
+                    name="email"
                     className="input pl-9"
-                    type="text"
+                    type="email"
+                    autoComplete="username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     autoFocus
@@ -105,19 +111,27 @@ export default function Login() {
                 </div>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
+                <label htmlFor="login-password" className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Password
+                </label>
                 <div className="relative">
                   <Lock className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <input
+                    id="login-password"
+                    name="password"
                     className="input pl-9"
                     type="password"
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
               </div>
               {error && (
-                <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-200">
+                <div
+                  role="alert"
+                  className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-200"
+                >
                   {error}
                 </div>
               )}

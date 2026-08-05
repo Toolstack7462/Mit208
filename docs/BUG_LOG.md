@@ -23,6 +23,7 @@ The reproduction commands assume the setup in the README.
 | [BUG-13](#bug-13) | Medium | Database integrity | Fixed |
 | [BUG-14](#bug-14) | Medium | Token and password handling | Fixed |
 | [BUG-15](#bug-15) | Low | Notification correctness | Fixed |
+| [BUG-16](#bug-16) | Medium | Concurrency / error mapping | Fixed |
 
 ---
 
@@ -601,6 +602,78 @@ the timer on unmount.
 regression) and `eventually dismisses the error on its own longer timeout`. The
 corrected behaviour is visible in
 `evidence/screenshots/12-duplicate-request-blocked.png`.
+
+---
+
+## BUG-16
+### A concurrent duplicate request returned 503 "please try again", which can never succeed
+
+**Severity:** Medium — correct data, wrong and actively misleading answer.
+
+**How it was found**
+
+Only by running the suite against real PostgreSQL. The automated tests use
+SQLite, and this behaviour depends on a database constraint firing under a race
+that a single-threaded SQLite test never produces.
+
+**Symptom**
+
+The duplicate release-request check and the `INSERT` are two statements, so a
+concurrent request can commit its own pending row in between. The partial unique
+index added in BUG-13 correctly rejects the loser — but the caller saw:
+
+```
+first=201  second=503
+{"error":{"code":503,"message":"The database could not complete this request.
+ Please try again.","request_id":"..."}}
+```
+
+The data stayed correct, but the response was wrong twice over: 503 implies a
+transient database fault, and "please try again" is advice that can never work,
+because the conflicting row is permanent until someone decides that request. A
+sequential duplicate already returned a clear 409.
+
+**Investigation**
+
+`create_request` had no `except` around the flush and commit, so the
+`IntegrityError` from the index propagated to the generic `SQLAlchemyError`
+handler in `main.py`, which maps every database fault to 503. That handler is
+right for an unreachable database and wrong for a rule the user has broken.
+
+**Fix** — `backend/app/routers/requests.py`
+
+Wrap the flush/commit, roll back, and translate an index violation into the same
+409 and message a sequential duplicate receives. Any other `IntegrityError` is
+re-raised so it keeps its own handling and is not mislabelled as a duplicate.
+
+The duplicate lookup was also extracted into `find_open_request`, which makes the
+race window reproducible in a test instead of only in production.
+
+**A second defect inside the first fix**
+
+The first version matched the error text against the index name. That passed on
+PostgreSQL and **failed on SQLite**, because the two drivers describe the same
+violation differently:
+
+```
+PostgreSQL: duplicate key value violates unique constraint
+            "uq_request_one_pending_per_email_user"
+SQLite:     UNIQUE constraint failed:
+            staff_release_requests.email_id, staff_release_requests.requested_by
+```
+
+PostgreSQL names the index; SQLite names the columns. `is_pending_request_conflict`
+now accepts either, and is exercised with both drivers' exact wording.
+
+**Verification** — `backend/tests/test_integrity.py`:
+`test_a_concurrent_duplicate_request_gets_409_not_503`,
+`test_the_losing_concurrent_request_writes_nothing`,
+`test_an_unrelated_integrity_error_is_not_masked_as_a_duplicate`, and
+`test_pending_request_conflict_is_recognised_on_both_engines` (parameterised over
+both drivers' wording plus three failures that must *not* match).
+
+Confirmed by running the full suite on both engines: **118 passed on PostgreSQL
+16.6 and 118 passed on SQLite.**
 
 ---
 

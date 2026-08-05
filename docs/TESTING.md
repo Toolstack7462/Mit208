@@ -12,13 +12,19 @@ tests). The `backend-postgres` CI job additionally runs against PostgreSQL 16.
 
 | Layer | Tool | Files | Tests | Result |
 |---|---|---|---|---|
-| Backend unit + API | pytest 9.1.1 | 8 | **110** | **110 passed** |
+| Backend unit + API (SQLite) | pytest 9.1.1 | 8 | **118** | **118 passed** |
+| Backend unit + API (**PostgreSQL 16.6**) | pytest 9.1.1 | 8 | **118** | **118 passed** |
 | Frontend unit + component | vitest 2.1.9 | 9 | **69** | **69 passed** |
 | Live end-to-end (running server) | `smoke_test.py` | 1 | **20 checks** | **20/20 passed** |
 | Production build | `vite build` | — | — | **built in 7.27s**, 1653 modules |
-| **Total automated** | | **17** | **179** | **179 passed, 0 failed** |
+| **Total automated** | | **17** | **187** | **187 passed, 0 failed** |
 
-**Backend statement coverage: 89% (805 of 909 statements).**
+**Backend statement coverage: 89% (823 of 924 statements).**
+
+The backend suite was run twice — once on in-memory SQLite and once against a
+real PostgreSQL 16.6 server — and passes identically on both. That is what
+substantiates the claim that the two engines behave the same; running only on
+SQLite would not (see BUG-03 and BUG-16, both of which are engine-specific).
 
 ---
 
@@ -29,7 +35,12 @@ tests). The `backend-postgres` CI job additionally runs against PostgreSQL 16.
 cd backend
 python -m venv .venv && .venv\Scripts\Activate.ps1     # or: source .venv/bin/activate
 pip install -r requirements-dev.txt
-python -m pytest                                        # 110 passed
+python -m pytest                                        # 118 passed (SQLite)
+
+# The same suite against PostgreSQL, which is the assessed target:
+#   createdb phishguard_test
+#   $env:TEST_DATABASE_URL="postgresql+psycopg2://USER:PASS@localhost:5432/phishguard_test"
+#   python -m pytest                                      # 118 passed (PostgreSQL)
 python -m pytest --cov=app --cov-report=term-missing    # + coverage
 
 # Frontend — 69 tests
@@ -47,7 +58,7 @@ python smoke_test.py                    # in another -> ALL 20/20 CHECKS PASSED
 
 ---
 
-## 3. Backend suite — 110 tests
+## 3. Backend suite — 118 tests, run on both engines
 
 | File | Tests | Covers |
 |---|---|---|
@@ -58,44 +69,47 @@ python smoke_test.py                    # in another -> ALL 20/20 CHECKS PASSED
 | `tests/test_validation.py` | 13 | Input validation, boundary lengths, unique message ids, LIKE escaping, error envelope |
 | `tests/test_security.py` | 27 | Secret-key enforcement, rate limiting, credential handling, privilege escalation, token claims and types, bcrypt input boundary, security headers |
 | `tests/test_release_workflow.py` | 14 | Duplicate suppression, justification rules, held-only rule, decision path |
-| `tests/test_integrity.py` | 27 | Defensive parsing of stored data, database CHECK constraints, the partial unique index, decision-completeness, transaction rollback |
+| `tests/test_integrity.py` | 35 | Defensive parsing of stored data, database CHECK constraints, the partial unique index, decision-completeness, transaction rollback, and the concurrent-duplicate race |
 
-Each test runs against a **freshly created and seeded in-memory SQLite database**
-(`tests/conftest.py`), so cases are independent regardless of order and the real
-`phishguard.db` is never touched. The login rate limiter is reset between tests
+Each test runs against a **freshly created and seeded database** (`tests/conftest.py`),
+so cases are independent regardless of order and the real `phishguard.db` is
+never touched. The engine defaults to in-memory SQLite for speed; setting
+`TEST_DATABASE_URL` runs the identical suite against PostgreSQL, and the run
+header states which engine was used. The login rate limiter is reset between tests
 because its state is process-wide.
 
 ### Coverage by module
 
 ```
 Name                       Stmts   Miss  Cover
-------------------------------------------------
+----------------------------------------------
 app/__init__.py                1      0   100%
 app/audit.py                   7      0   100%
 app/config.py                 32      0   100%
-app/models.py                 86      0   100%
-app/security.py               32      0   100%
-app/ratelimit.py              35      1    97%
-app/routers/requests.py       62      2    97%
-app/schemas.py               159      7    96%
 app/database.py               19      1    95%
-app/scoring.py               101      5    95%
 app/deps.py                   28      2    93%
-app/routers/audit.py          14      1    93%
-app/routers/emails.py        105      7    93%
-app/routers/auth.py           53      4    92%
-app/main.py                   86      8    91%
-app/routers/dashboard.py      26      3    88%
+app/main.py                   86      5    94%
 app/ml_model.py                3      3     0%   <- unimplemented placeholder
+app/models.py                 86      0   100%
+app/ratelimit.py              35      1    97%
+app/routers/__init__.py        0      0   100%
+app/routers/audit.py          14      1    93%
+app/routers/auth.py           53      4    92%
+app/routers/dashboard.py      26      3    88%
+app/routers/emails.py        105      7    93%
+app/routers/requests.py       77      2    97%
+app/schemas.py               159      7    96%
+app/scoring.py               101      5    95%
+app/security.py               32      0   100%
 app/seed.py                   60     60     0%   <- CLI script, exercised by smoke test
-------------------------------------------------
-TOTAL                        909    104    89%
+----------------------------------------------
+TOTAL                        924    101    89%
 ```
 
 The two 0% modules are honest exclusions: `ml_model.py` is a documented
 placeholder that is deliberately not wired in, and `seed.py` is a command-line
 script covered by the live smoke test instead. Excluding those two, coverage of
-the running application code is **95%** (805 of 846 statements).
+the running application code is **95%** (823 of 861 statements).
 
 ---
 
@@ -258,7 +272,93 @@ Mapped to the rubric's minimum testing areas.
 
 ---
 
-## 7. Continuous integration
+## 7. PostgreSQL verification (5 August 2026)
+
+PostgreSQL is the assessed target while the automated suite defaults to SQLite,
+so the whole stack was run against a real PostgreSQL **16.6** server. This is the
+evidence behind every "behaves the same on both engines" claim in this project.
+
+**Cluster:** a throwaway PostgreSQL 16.6 instance on port 55432, created with
+`initdb`, used only for this verification and deleted afterwards.
+
+### What was verified
+
+| # | Check | Result |
+|---|---|---|
+| 1 | `psql -v ON_ERROR_STOP=1 -f database/schema.sql` | applied cleanly, exit 0 |
+| 2 | 10 `CHECK` constraints present in `pg_constraint` | confirmed |
+| 3 | Partial unique index present in `pg_indexes` | confirmed |
+| 4 | `python -m app.seed` **into the psql-created tables** (no `--reset`) | 4 users, 8 emails |
+| 5 | 7 invalid writes attempted directly in SQL | all 7 rejected |
+| 6 | Full backend suite with `TEST_DATABASE_URL` | **118 passed** |
+| 7 | `smoke_test.py` against the app on PostgreSQL | **20/20 passed** |
+| 8 | `/system/database-status` | `"engine":"postgresql","using_fallback":false` |
+
+### The partial index, as PostgreSQL stores it
+
+```sql
+CREATE UNIQUE INDEX uq_request_one_pending_per_email_user
+    ON public.staff_release_requests USING btree (email_id, requested_by)
+    WHERE ((status)::text = 'pending'::text);
+```
+
+### Invalid writes, and the constraint that stopped each
+
+```
+INSERT ... role='superadmin'
+  ERROR: violates check constraint "ck_users_role"
+UPDATE email_records SET status='deleted'
+  ERROR: violates check constraint "ck_email_status"
+UPDATE email_records SET risk_score=1000
+  ERROR: violates check constraint "ck_email_risk_score"
+UPDATE email_records SET auth_spf='maybe'
+  ERROR: violates check constraint "ck_email_spf"
+INSERT a second pending request for the same (email, user)
+  ERROR: duplicate key value violates unique constraint
+         "uq_request_one_pending_per_email_user"
+  DETAIL: Key (email_id, requested_by)=(2, 3) already exists.
+INSERT a 'pending' request that names a reviewer
+  ERROR: violates check constraint "ck_request_decision_complete"
+INSERT an 'approved' request with no reviewer
+  ERROR: violates check constraint "ck_request_decision_complete"
+```
+
+### What running on PostgreSQL actually caught
+
+Two things a SQLite-only run could not have found:
+
+1. **BUG-16** — a concurrent duplicate release request returned `503 "please try
+   again"` instead of `409`. The advice was impossible to act on, because the
+   conflicting row is permanent until the request is decided.
+2. **A defect inside that fix.** The first version identified the violation by
+   the index name, which PostgreSQL includes and SQLite does not — SQLite names
+   the columns instead. It passed on PostgreSQL and failed on SQLite. Running
+   both engines is what exposed it.
+
+Screenshots 18–20 in `evidence/screenshots/` were captured from the application
+while it was connected to PostgreSQL; `capture_postgres_evidence.py` refuses to
+run if the backend reports any other engine.
+
+### Reproducing this
+
+```bash
+createdb phishguard_db && createdb phishguard_test
+psql -d phishguard_db -v ON_ERROR_STOP=1 -f database/schema.sql
+
+cd backend
+export DATABASE_URL=postgresql+psycopg2://USER:PASS@localhost:5432/phishguard_db
+export TEST_DATABASE_URL=postgresql+psycopg2://USER:PASS@localhost:5432/phishguard_test
+python -m app.seed          # NOT --reset: that would drop the psql-created tables
+python -m pytest            # 118 passed
+uvicorn app.main:app --port 8000 &
+python smoke_test.py        # ALL 20/20 CHECKS PASSED
+```
+
+The `backend-postgres` CI job performs the same sequence on every push.
+
+---
+
+## 8. Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request to `main`:
 
@@ -274,14 +374,16 @@ by machine rather than only claimed in prose.
 
 ---
 
-## 8. What is **not** tested
+## 9. What is **not** tested
 
 Stated honestly so no coverage claim is overstated.
 
-1. **No browser end-to-end test** (Playwright/Cypress). Component tests mock the
-   API, and `smoke_test.py` drives the API without a browser, so no single
-   automated test exercises real-browser → API → database. The manual workflow
-   in the README covers this gap by hand.
+1. **No browser end-to-end *assertion* suite.** Playwright drives a real browser
+   through the whole workflow to capture the screenshots and the recording, so
+   the browser → API → database path is genuinely exercised — but those scripts
+   capture evidence rather than assert outcomes, so a regression would show up
+   as a wrong-looking image, not a failing test. Component tests mock the API,
+   and `smoke_test.py` drives the API without a browser.
 2. **No load or performance testing.** No throughput or latency figure is
    claimed anywhere.
 3. **No ML evaluation metrics.** There is no ML model in the MVP, so no
@@ -296,6 +398,11 @@ Stated honestly so no coverage claim is overstated.
 6. **No cross-browser or mobile-device matrix.** The layout uses responsive
    Tailwind breakpoints and wide tables scroll inside their own container, but
    this was verified by inspection, not by an automated device matrix.
-7. **`app/database.py` lines 22–26** (the `get_db` teardown path) and parts of
-   `main.py`'s startup logging are not covered, which is why coverage is 87% and
-   not higher.
+7. **Parts of `main.py`'s startup logging and a branch of the session teardown**
+   are not covered, which is why coverage is 89% and not higher. The two 0%
+   modules are the unimplemented classifier placeholder and the seeding script.
+8. **Concurrency is tested by reproducing the race window, not by real parallel
+   requests.** `test_a_concurrent_duplicate_request_gets_409_not_503` neutralises
+   the pre-check so the INSERT reaches the index exactly as a racing worker's
+   would, which is deterministic and repeatable; it is not a load test with two
+   simultaneous clients.

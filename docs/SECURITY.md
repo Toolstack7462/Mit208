@@ -15,6 +15,7 @@ hardened production system; the limitations section is deliberately explicit.
 | Stateless JWT (HS256) with expiry | `app/security.py` — `exp` from `ACCESS_TOKEN_EXPIRE_MINUTES` | `test_expired_token_is_rejected` |
 | Tokens carry `iat`, `jti` and `typ` | `app/security.py` — a token of another type is refused, `exp`/`sub` required, algorithm allow-listed | `test_access_token_carries_identifying_claims`, `test_token_of_another_type_is_rejected` |
 | Over-long passwords refused, never truncated | `app/security.py` — `PasswordTooLongError` above bcrypt's 72-byte limit | `test_password_longer_than_bcrypt_allows_is_refused_not_truncated` |
+| Concurrent duplicate request answered correctly | `routers/requests.py` — an index violation becomes 409, not a 503 that advises a retry which cannot succeed | `test_a_concurrent_duplicate_request_gets_409_not_503` |
 | Wrongly-signed tokens rejected | `jwt.decode` verifies the signature; any `PyJWTError` → 401 | `test_expired_or_forged_token_is_rejected` |
 | No account enumeration | Unknown address and wrong password return an identical 401 and message | `test_unknown_and_wrong_password_are_indistinguishable` |
 | No timing-based enumeration | `dummy_verify()` burns one bcrypt comparison when the address is unknown | reviewed; timing is not asserted numerically (see limitations) |

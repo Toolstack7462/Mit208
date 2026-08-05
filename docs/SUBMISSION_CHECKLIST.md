@@ -42,29 +42,32 @@ Legend: **[x]** done and verifiable · **[ ]** still requires the author
       edge cases; see `docs/TESTING.md` sections 6 and the 422/409 cases
 - [x] **Runs on a clean machine** — documented setup steps; `npm install`,
       `npm test` and `npm run build` all verified
-- [ ] **One local PostgreSQL run** — create the database, apply
-      `database/schema.sql`, seed, and screenshot `/system/database-status`
-      showing `"engine": "postgresql"`. CI already tests PostgreSQL 16, so this
-      is corroboration rather than the only evidence
+- [x] **Local PostgreSQL run** — done on PostgreSQL 16.6: `database/schema.sql`
+      applied with `ON_ERROR_STOP`, all 10 CHECK constraints and the partial
+      unique index confirmed in `pg_constraint`/`pg_indexes`, seed verified,
+      the full 118-test suite passed, the 20-check live workflow passed, and
+      `/system/database-status` captured showing `"engine": "postgresql"`
+      (`evidence/screenshots/18-postgresql-database-status.png`)
 
 ## 3. Testing evidence
 
-- [x] **Positive test of each core function** — 110 backend tests, 69 frontend tests
+- [x] **Positive test of each core function** — 118 backend tests (on both
+      engines), 69 frontend tests
 - [x] **Invalid-input tests** — blank, malformed, over-long and whitespace-only
       input across every write endpoint
 - [x] **Error-handling evidence** — consistent error envelope with a traceable
       `request_id`; the UI shows a retryable message instead of an empty screen
-- [x] **Integration evidence** — 20 live checks against a running server and a
-      real database file
+- [x] **Integration evidence** — 20 live checks against a running server, run
+      against both SQLite and PostgreSQL 16.6
 - [x] **Security/privacy evidence** — `docs/SECURITY.md` maps each control to the
       test that proves it
 - [x] **Usability evidence** — labelled screenshots of every core screen, plus
       accessibility-driven tests that locate fields by their labels
 - [x] **Regression evidence** — named regression tests for BUG-01, BUG-04,
       BUG-05, BUG-09, BUG-12 and BUG-15
-- [x] **Bug log with at least two meaningful problems** — 15 entries, each
+- [x] **Bug log with at least two meaningful problems** — 16 entries, each
       reproduced first, then fixed, then locked in by a test
-- [x] **Coverage measured** — 89% backend statement coverage (805/909)
+- [x] **Coverage measured** — 89% backend statement coverage (823/924)
 - [x] **ML/AI expectations** — not applicable and stated as such: there is no
       trained model, so no accuracy metric is claimed anywhere
 
@@ -143,7 +146,7 @@ python -m venv .venv && .venv\Scripts\Activate.ps1
 pip install -r requirements-dev.txt
 cp .env.example .env
 python -c "import secrets; print(secrets.token_urlsafe(48))"   # paste into SECRET_KEY
-python -m pytest                      # expect: 110 passed
+python -m pytest                      # expect: 118 passed
 python -m app.seed --reset
 uvicorn app.main:app --port 8000
 

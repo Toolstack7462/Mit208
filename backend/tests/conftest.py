@@ -15,9 +15,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.database import Base, get_db
+from app.database import Base, get_db, session_scope
 from app.main import app
 from app.models import AuditLog, EmailRecord, StaffReleaseRequest, User
+from app.routers.auth import login_limiter
 from app.scoring import score_email
 from app.security import hash_password
 
@@ -86,14 +87,16 @@ def _setup_database():
         db.close()
 
     def _override_get_db():
-        db = TestingSessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
+        # Reuse the application's own session_scope so the rollback-on-failure
+        # behaviour under test is the real implementation, not a copy of it.
+        yield from session_scope(TestingSessionLocal)
 
     app.dependency_overrides[get_db] = _override_get_db
+    # The login rate limiter keeps process-wide state; clear it so a test that
+    # deliberately fails logins cannot lock out the tests that run after it.
+    login_limiter.clear()
     yield
+    login_limiter.clear()
     app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=test_engine)
 

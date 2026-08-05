@@ -31,7 +31,7 @@ def test_analyst_approves_request_and_releases_email(client, staff_headers, anal
 def test_deciding_twice_conflicts(client, staff_headers, analyst_headers):
     email = _staff_held_email(client, staff_headers)
     req = client.post("/api/release-requests", headers=staff_headers,
-                      json={"email_id": email["id"], "reason": "x"}).json()
+                      json={"email_id": email["id"], "reason": "Expected vendor invoice, please review."}).json()
     client.post(f"/api/release-requests/{req['id']}/decision", headers=analyst_headers,
                 json={"status": "denied"})
     again = client.post(f"/api/release-requests/{req['id']}/decision", headers=analyst_headers,
@@ -42,7 +42,7 @@ def test_deciding_twice_conflicts(client, staff_headers, analyst_headers):
 def test_staff_cannot_decide_requests(client, staff_headers):
     email = _staff_held_email(client, staff_headers)
     req = client.post("/api/release-requests", headers=staff_headers,
-                      json={"email_id": email["id"], "reason": "x"}).json()
+                      json={"email_id": email["id"], "reason": "Expected vendor invoice, please review."}).json()
     r = client.post(f"/api/release-requests/{req['id']}/decision", headers=staff_headers,
                     json={"status": "approved"})
     assert r.status_code == 403

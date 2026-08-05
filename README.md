@@ -1,5 +1,9 @@
 # PhishGuard
 
+**Phishing email detection, review and quarantine management — MIT208 Project 2**
+
+[![CI](https://github.com/Toolstack7462/Mit208/actions/workflows/ci.yml/badge.svg)](https://github.com/Toolstack7462/Mit208/actions/workflows/ci.yml)
+
 ## Project Overview
 
 This repository contains the practical implementation of PhishGuard, a phishing
@@ -15,7 +19,56 @@ real email data is used.
 | Frontend (React + Vite) | http://localhost:5173 |
 | Backend (FastAPI) | http://localhost:8000 |
 | Interactive API documentation | http://localhost:8000/docs |
-| Database | PostgreSQL `phishguard_db` |
+| Database | PostgreSQL `phishguard_db` (SQLite fallback available) |
+
+**Verified status:** 110 backend tests, 69 frontend tests and 20 live end-to-end
+API checks all pass; backend statement coverage is 89% (805/909). Screenshots and
+a 4-minute walkthrough were captured from the running application. See
+[`docs/TESTING.md`](docs/TESTING.md) for the commands and captured output.
+
+---
+
+## Problem Addressed
+
+Phishing remains the most common initial access route into an organisation, and
+the two usual responses both fail in practice. A filter that silently deletes
+suspicious mail destroys legitimate messages with no recourse, and a filter that
+simply tags mail leaves an untrained recipient to make the security decision.
+Neither leaves any record of who decided what.
+
+PhishGuard addresses the gap between those two extremes:
+
+- **Suspicious mail is held, not deleted.** Messages scoring high or critical are
+  quarantined automatically, so nothing dangerous is delivered and nothing
+  legitimate is lost.
+- **Every score is explainable.** The rule engine returns a plain-language reason
+  for each point it adds, so an analyst can judge the finding instead of
+  trusting an opaque number.
+- **The recipient has a route back.** Staff can see that a message is held and
+  request its release with a written justification, rather than emailing IT and
+  waiting.
+- **The decision is a security decision, made by a security person.** Only an
+  analyst or admin can release mail.
+- **Everything is recorded.** Every login, classification, action and decision is
+  written to an append-only audit log with actor, entity, detail and IP address.
+
+**Target users:** security analysts (triage and decide), general staff (see their
+own held mail and request release), and administrators (full oversight).
+
+---
+
+## Documentation
+
+| Document | Contents |
+|---|---|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Component diagram, request lifecycle, end-to-end workflow, design decisions |
+| [`docs/ERD.md`](docs/ERD.md) | Entity-relationship diagram, relationships, indexes, integrity rules |
+| [`docs/API.md`](docs/API.md) | All 19 endpoints with request/response examples and status codes |
+| [`docs/TESTING.md`](docs/TESTING.md) | Test strategy, documented test cases, verified results, coverage |
+| [`docs/SECURITY.md`](docs/SECURITY.md) | Security controls with the test proving each, plus known limitations |
+| [`docs/BUG_LOG.md`](docs/BUG_LOG.md) | 15 defects found, investigated and fixed, each with a regression test |
+| [`docs/SUBMISSION_CHECKLIST.md`](docs/SUBMISSION_CHECKLIST.md) | What is done, what is still manual, and how to verify each item |
+| [`evidence/README.md`](evidence/README.md) | How the screenshots and walkthrough recording were produced |
 
 ---
 
@@ -38,6 +91,31 @@ real email data is used.
 - Audit log recording every action with actor, entity, details and IP address.
 - Dashboard with summary statistics, a weekly threat-distribution chart, and a
   threat-category distribution chart.
+- Input validation on every write endpoint, with limits matched to the database
+  column widths so behaviour is identical on PostgreSQL and SQLite.
+- Consistent API error envelope with a traceable `request_id`, and distinct
+  loading / error / empty states in the UI with a retry action.
+- Brute-force protection on login (per-IP failed-attempt limit), enforced JWT
+  signing-key strength, and typed tokens carrying `iat`/`jti`/`typ`.
+- Database-level integrity: `CHECK` constraints on every enumerated column, a
+  bounded `risk_score`, and a partial unique index making "one open release
+  request per user per email" atomic rather than merely checked in the API.
+- Defensive parsing of stored data, so one corrupt row cannot make a record
+  unreadable, and per-request rollback so a failed action writes nothing.
+
+### Not implemented (stated deliberately)
+
+- **The DistilBERT classifier is not built.** `backend/app/ml_model.py` documents
+  the intended integration point and raises `NotImplementedError`; it is not
+  called by any running code path. Every risk score in the working system comes
+  from the rule engine in `backend/app/scoring.py`.
+- **SPF/DKIM/DMARC results are simulated**, derived from the rule engine's own
+  spoofing signals. The synthetic sample data contains no real SMTP headers, so
+  no real authentication check is performed.
+- **No live mail ingestion.** Emails enter through the seed script or the
+  `POST /api/emails` endpoint, not from a mail server.
+
+None of these gaps affects the core MVP workflow.
 
 ---
 
@@ -70,17 +148,26 @@ Mit208/
 │   │   ├── ml_model.py     # Placeholder for the future DistilBERT classifier
 │   │   ├── audit.py        # Audit-log helper
 │   │   ├── seed.py         # Demo users and sample-email seeder
+│   │   ├── ratelimit.py    # Per-IP failed-login limiter
 │   │   └── routers/        # auth, emails, requests, audit, dashboard
+│   ├── tests/              # 110 pytest tests (8 files)
+│   ├── smoke_test.py       # 20 live end-to-end API checks
 │   ├── requirements.txt
+│   ├── requirements-dev.txt
 │   └── .env.example
 ├── frontend/               # React + Vite + Tailwind UI
 │   └── src/
 │       ├── pages/          # Login, Dashboard, Inbox, StaffPortal, ReleaseRequests, AuditLogs
-│       ├── components/     # Sidebar, Layout, RiskBadge, EmailDetailPanel, charts
+│       ├── components/     # Sidebar, Layout, RiskBadge, EmailDetailPanel, charts, StateBlock
 │       ├── context/        # Authentication context
-│       └── lib/            # Risk-level mapping helpers
+│       ├── lib/            # risk.js (level mapping), errors.js (API error mapping)
+│       ├── test/           # Vitest setup
+│       └── **/*.test.jsx   # 69 vitest tests (9 files)
 ├── database/               # schema.sql, seed_data.sql, sample_emails.json
-├── screenshots/            # UI and API documentation screenshots
+├── docs/                   # ARCHITECTURE, ERD, API, TESTING, SECURITY, BUG_LOG,
+│                           #   SUBMISSION_CHECKLIST
+├── evidence/               # capture/recording scripts, 17 screenshots, MP4 walkthrough
+├── .github/workflows/      # ci.yml — backend matrix, PostgreSQL job, frontend build
 └── README.md
 ```
 
@@ -100,9 +187,19 @@ Mit208/
 
 ## Local Setup
 
-**Prerequisites:** Python 3.11+ and Node.js 18+. PostgreSQL 14+ is recommended;
-if it is not installed, the backend automatically falls back to a local SQLite
-file so the application still runs.
+**Prerequisites**
+
+| Requirement | Version | Notes |
+|---|---|---|
+| Python | **3.11 – 3.14** | Tested on 3.14.3 locally; CI covers 3.11, 3.12 and 3.13 |
+| Node.js | **18+** | Tested on 24.14.1; CI uses 20 |
+| PostgreSQL | 14+ | Recommended. If absent, the backend falls back to a local SQLite file and still runs |
+
+Dependencies are pinned with the compatible-release operator (`~=`) rather than
+exact `==` pins. This is deliberate: exact pins to older patch releases could not
+be installed on Python 3.13+ because `pydantic-core` and `psycopg2` publish
+binary wheels only for the interpreters available at that patch's release. See
+[`docs/BUG_LOG.md`](docs/BUG_LOG.md) BUG-01.
 
 ```bash
 git clone https://github.com/Toolstack7462/Mit208.git
@@ -113,10 +210,38 @@ cd Mit208
 
 ## Database Setup
 
-PhishGuard reads its connection string from `DATABASE_URL` in `backend/.env`.
-A template is provided as `backend/.env.example` — copy it to `backend/.env`
-and adjust as needed. The `.env` file is excluded from version control; only
-`.env.example` is committed.
+PhishGuard reads its configuration from `backend/.env`. A template is provided as
+`backend/.env.example` — copy it to `backend/.env` and fill in real values. The
+`.env` file is excluded from version control; only `.env.example` is committed,
+and it contains **no working credentials or keys**.
+
+### Environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DATABASE_URL` | `sqlite:///./phishguard.db` | Connection string. PostgreSQL is the official target |
+| `ENVIRONMENT` | `development` | `production` refuses a weak `SECRET_KEY` and hides internal error detail |
+| `SECRET_KEY` | *(none usable)* | **Required.** JWT signing key, ≥ 32 characters |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `480` | Token lifetime |
+| `FRONTEND_ORIGIN` | `http://localhost:5173` | CORS allow-list entry |
+| `LOGIN_MAX_ATTEMPTS` | `10` | Failed logins allowed per IP per window |
+| `LOGIN_WINDOW_SECONDS` | `300` | Rolling window for the above |
+
+### Generating a signing key
+
+`SECRET_KEY` has **no usable default**. A predictable signing key would let anyone
+forge an admin token, so the application will not quietly accept one:
+
+- With `ENVIRONMENT=production`, a missing, short or placeholder key makes the
+  app **refuse to start**.
+- In development it starts but signs tokens with a random per-process key and logs
+  a warning — so sessions do not survive a restart until you configure one.
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Paste the result into `SECRET_KEY` in `backend/.env`.
 
 PostgreSQL is the official target database. SQLite is supported only as a
 zero-install fallback for quick local testing.
@@ -168,8 +293,9 @@ python -m venv .venv
 
 pip install -r requirements.txt
 
-# Copy the environment template and adjust DATABASE_URL if required
+# Copy the environment template, then set DATABASE_URL and SECRET_KEY
 cp .env.example .env
+python -c "import secrets; print(secrets.token_urlsafe(48))"   # paste into SECRET_KEY
 
 # Create demo users and sample emails
 python -m app.seed --reset
@@ -265,35 +391,109 @@ curl http://localhost:8000/system/database-status
 # {"engine":"postgresql","type":"PostgreSQL","using_fallback":false,...}
 ```
 
+A full written reference — all 19 endpoints with request/response examples, status
+codes and the error format — is in [`docs/API.md`](docs/API.md).
+
 An end-to-end check of the workflow is available in `backend/smoke_test.py` and
-can be run while the backend is active.
+can be run while the backend is active (20 checks).
 
 ---
 
 ## Testing
 
-Two complementary test layers are provided:
+Three complementary layers. Full detail, 55 documented test cases and captured
+output are in [`docs/TESTING.md`](docs/TESTING.md).
 
-| Layer | File(s) | What it covers |
-|-------|---------|----------------|
-| Automated unit + API tests | `backend/tests/` (pytest) | 29 tests: rule-engine scoring, JWT auth, role-based access, email actions, release-request workflow, dashboard and audit logging |
-| End-to-end smoke test | `backend/smoke_test.py` | 11 live checks against a running server |
+| Layer | Location | Coverage |
+|---|---|---|
+| Backend unit + API (pytest) | `backend/tests/` | **110 tests** — rule engine, JWT auth, RBAC, email actions, release workflow, validation, security controls, database integrity, dashboard, audit |
+| Frontend unit + component (vitest) | `frontend/src/**/*.test.{js,jsx}` | **69 tests** — error mapping, risk helpers, route/role guards, login flow, error & empty states, release-request validation, notification tone |
+| Live end-to-end | `backend/smoke_test.py` | **20 checks** against a real running server and database |
+
+**Verified results (5 August 2026):** 110 passed · 69 passed · 20/20 passed.
+Backend statement coverage **89%** (805/909).
 
 The pytest suite runs against an **isolated in-memory SQLite database** (it never
 touches `phishguard.db`), so it is safe to run at any time and requires no server:
 
 ```bash
+# Backend
 cd backend
 pip install -r requirements-dev.txt
-python -m pytest            # 29 passed
+python -m pytest                                       # 110 passed
+python -m pytest --cov=app --cov-report=term-missing   # with coverage
+
+# Frontend
+cd ../frontend
+npm install
+npm test                                               # 69 passed
+
+# Live end-to-end (needs the server running and the database seeded)
+cd ../backend
+python -m app.seed --reset
+uvicorn app.main:app --port 8000     # terminal 1
+python smoke_test.py                 # terminal 2 -> ALL 20/20 CHECKS PASSED
 ```
+
+### Continuous integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push and pull
+request to `main`:
+
+| Job | What it verifies |
+|---|---|
+| `backend` | Installs and runs the suite + coverage on Python 3.11, 3.12 and 3.13 |
+| `backend-postgres` | Applies `database/schema.sql` to a real PostgreSQL 16 service, seeds it, and asserts 4 users + 8 emails |
+| `frontend` | `npm ci`, the 69-test vitest suite, and a production `vite build` |
 
 ---
 
 ## Screenshots
 
-| Login | Dashboard |
+All images are captures of the running application, taken with Playwright and
+Chromium at 3200 x 2000 by [`evidence/capture_screenshots.py`](evidence/capture_screenshots.py).
+The full set of 17, with a description of each, is in
+[`evidence/screenshots/INDEX.md`](evidence/screenshots/INDEX.md). Re-run the
+script after any interface change so the evidence cannot go stale.
+
+| Login | Analyst dashboard |
 |-------|-----------|
+| ![Login](evidence/screenshots/01-login.png) | ![Dashboard](evidence/screenshots/03-analyst-dashboard.png) |
+
+| Risk-sorted inbox | Explainable score |
+|-------------|--------------|
+| ![Email inbox](evidence/screenshots/04-analyst-inbox.png) | ![Email detail](evidence/screenshots/06-email-detail-explainable-score.png) |
+
+| Staff portal | Release-request queue |
+|--------------|------------------|
+| ![Staff portal](evidence/screenshots/09-staff-portal.png) | ![Release requests](evidence/screenshots/08-release-requests-analyst.png) |
+
+| Audit trail | API documentation |
+|------------|-------------------|
+| ![Audit logs](evidence/screenshots/07-audit-log.png) | ![FastAPI docs](evidence/screenshots/17-openapi-docs.png) |
+
+Validation and failure behaviour is captured too — a refused duplicate request,
+a refused short justification, and the dashboard when the API cannot be reached:
+
+| Duplicate refused | Backend unreachable |
+|---|---|
+| ![Duplicate refused](evidence/screenshots/12-duplicate-request-blocked.png) | ![API unreachable](evidence/screenshots/16-error-state-api-unreachable.png) |
+
+---
+
+## Walkthrough recording
+
+[`evidence/video/PhishGuard_Walkthrough.mp4`](evidence/video/PhishGuard_Walkthrough.mp4)
+— 4:00, 1280x720, H.264, **silent**. A capture of the real application produced by
+[`evidence/record_walkthrough.py`](evidence/record_walkthrough.py), paced to the
+five segments the assessment brief asks for. The on-screen timeline is in
+`evidence/video/TIMING.md`.
+
+The audio track is intentionally empty: the narration script and shot list are in
+[`evidence/NARRATION_SCRIPT.md`](evidence/NARRATION_SCRIPT.md) so the narration is
+recorded in the author's own voice rather than synthesised.
+
+-------|-----------|
 | ![Login](screenshots/login.png) | ![Dashboard](screenshots/dashboard.png) |
 
 | Email Inbox | Email Detail |
@@ -310,17 +510,99 @@ python -m pytest            # 29 passed
 
 ---
 
+## Limitations
+
+Stated honestly. None of these is claimed as solved, and none prevents the core
+MVP workflow from working end to end. The security-specific list with reasoning
+is in [`docs/SECURITY.md`](docs/SECURITY.md#8-known-limitations).
+
+**Scope**
+
+1. **No ML classifier.** `backend/app/ml_model.py` is a documented integration
+   point that raises `NotImplementedError`. All scoring is rule-based.
+2. **SPF/DKIM/DMARC are simulated** from the rule engine's own signals; the
+   synthetic dataset has no real SMTP headers.
+3. **No live mail ingestion.** Emails arrive via the seed script or
+   `POST /api/emails`, not from a mail server.
+4. **No user self-service.** No registration, password reset or profile editing;
+   accounts come from the seed script.
+5. **No email notifications.** Staff see request status in the portal only.
+
+**Security**
+
+6. **JWT is stored in `localStorage`**, so it is readable by any script that
+   achieves XSS. An `HttpOnly` cookie would be safer but needs CSRF protection
+   and a same-site deployment.
+7. **No HTTPS** in the local demo; tokens are not encrypted in transit.
+8. **No token revocation.** Logout clears the client copy only; a token stays
+   valid until it expires. Deactivating an account does block access
+   immediately, because `is_active` is re-checked on every request.
+9. **Rate-limit state is per-process.** With multiple Uvicorn workers each keeps
+   its own budget; a shared store would be needed for a real deployment.
+10. **Rate limiting is per IP, not per account**, so a distributed attacker is
+    not slowed.
+
+**Data and testing**
+
+11. **Enumerated columns use `CHECK` constraints, not PostgreSQL `ENUM` types.**
+    That is deliberate — `CHECK` behaves identically on SQLite, so the automated
+    suite exercises the same rules the assessed database applies — but native
+    enumerated types would be stricter still.
+12. **No browser end-to-end test.** Component tests mock the API and
+    `smoke_test.py` drives the API without a browser, so the browser → API →
+    database path is verified manually rather than automatically.
+13. **No accuracy metric for the rule engine.** It will produce false positives
+    and false negatives; quantifying that needs a labelled corpus this project
+    does not have. Human review is the compensating control.
+14. **No dependency vulnerability scanning in CI.**
+15. **The login page pre-fills the demo analyst credentials.** This is a
+    deliberate convenience for the demo and the live showcase, and would be
+    wrong in a real product.
+
+---
+
 ## Future Improvements
 
 - Integrate a fine-tuned DistilBERT classifier and blend its probability with the
   rule-based score. The integration point is defined in `backend/app/ml_model.py`.
 - Connect to a live mail source for real-time ingestion.
+- Add a browser end-to-end suite (Playwright) to cover the full UI path.
+- Move `status`, `role` and `risk_level` to database enumerated types.
+- Move rate-limit state to Redis so it holds across workers.
+- Add `pip-audit` and `npm audit` steps to CI.
 - Add analytics over a longer time range and exportable reports.
-- Expand automated test coverage to the React frontend (the backend already has
-  a 29-test pytest suite; see the Testing section).
 
 ---
 
-The `SECRET_KEY` value in `.env.example` is a development placeholder and should
-be replaced before any non-local deployment. SPF/DKIM/DMARC results are simulated
-from the synthetic sample data, as the demo dataset contains no real SMTP headers.
+## AI-Use Note
+
+Generative AI (Claude) was used during this project as a review and debugging
+aid. Specifically, it was used to:
+
+- review the working prototype against the assessment criteria and identify
+  weaknesses in validation, error handling and dependency configuration;
+- explain why the pinned dependency versions failed to install on newer Python
+  releases, and suggest the compatible-release approach;
+- suggest additional test cases, particularly negative and boundary cases.
+
+Every suggestion was reproduced, reviewed and tested before being kept. Each
+defect in [`docs/BUG_LOG.md`](docs/BUG_LOG.md) was **reproduced first** with a
+probe test, then fixed, then locked in with a named regression test — the
+recorded output in that file and in [`docs/TESTING.md`](docs/TESTING.md) is real
+output from this repository, not generated text. Suggestions that did not fit the
+project were rejected and are listed in the "investigated and deliberately not
+changed" table at the end of the bug log.
+
+The full AI-use declaration required by the assessment is in the final report.
+
+---
+
+## Author
+
+**MIT208 Project 2 (Implementation) — Assessment 3**
+Melbourne Institute of Higher Education
+
+Repository: <https://github.com/Toolstack7462/Mit208>
+
+> Student name and ID are recorded on the report title page and in the Moodle
+> submission rather than in this public repository.

@@ -134,6 +134,21 @@ jobs:
                          FROM staff_release_requests WHERE status = 'pending' LIMIT 1;" "duplicate pending request"
           echo "All PostgreSQL constraints verified."
 
+      - name: Run the whole test suite against PostgreSQL
+        working-directory: backend
+        env:
+          # A separate database: the fixture drops and recreates all tables per test.
+          TEST_DATABASE_URL: postgresql+psycopg2://phishguard:phishguard_ci@localhost:5432/phishguard_test
+          SECRET_KEY: ci-only-not-a-real-secret-value-0123456789abcdef
+          PGPASSWORD: phishguard_ci
+        # The suite defaults to in-memory SQLite, which is fast but does not
+        # behave identically to PostgreSQL - it ignores declared string lengths,
+        # and it words constraint violations differently. Running the same tests
+        # against the assessed engine is what proves the two agree.
+        run: |
+          psql -h localhost -U phishguard -d postgres -c "CREATE DATABASE phishguard_test;"
+          python -m pytest -q
+
       - name: Verify the ORM emits the same schema on PostgreSQL
         working-directory: backend
         env:

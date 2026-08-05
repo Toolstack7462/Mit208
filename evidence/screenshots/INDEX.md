@@ -21,3 +21,13 @@ Captured from the running application by `evidence/capture_screenshots.py` (Play
 | 15 | `15-staff-denied-audit-access.png` | Staff navigating to /audit is redirected to the dashboard; the API also returns 403 independently of the UI |
 | 16 | `16-error-state-api-unreachable.png` | Dashboard when the API cannot be reached: an explicit, retryable error instead of an empty or permanently loading screen |
 | 17 | `17-openapi-docs.png` | Interactive OpenAPI documentation generated from the FastAPI application |
+
+## PostgreSQL evidence
+
+Captured by `evidence/capture_postgres_evidence.py` against the application running on PostgreSQL 16.6, which the script verifies before taking a single image.
+
+| File | What it shows |
+|---|---|
+| `18-postgresql-database-status.png` | The API reporting PostgreSQL as the live engine, with using_fallback false — credentials are never included, only the URL scheme |
+| `19-postgresql-dashboard.png` | The analyst dashboard served from PostgreSQL — the same workflow as the SQLite captures, on the assessed target database |
+| `20-postgresql-openapi.png` | OpenAPI documentation served by the backend while connected to PostgreSQL |

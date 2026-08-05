@@ -6,15 +6,33 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
+
+# Permitted values, declared once and enforced at BOTH layers: the API validates
+# them, and the CHECK constraints below stop a direct SQL write (a migration, a
+# psql session, a future script) from storing something the application cannot
+# interpret. Keep in step with database/schema.sql.
+ROLES = ("analyst", "staff", "admin")
+EMAIL_STATUSES = ("inbox", "quarantined", "released", "confirmed_phishing", "safe")
+RISK_LEVELS = ("low", "medium", "high", "critical")
+REVIEW_ACTIONS = ("quarantine", "release", "confirm_phishing", "feedback")
+REQUEST_STATUSES = ("pending", "approved", "denied")
+
+
+def _in_list(column: str, values: tuple[str, ...]) -> str:
+    quoted = ", ".join(f"'{v}'" for v in values)
+    return f"{column} IN ({quoted})"
 
 
 def utcnow() -> datetime:
@@ -23,6 +41,9 @@ def utcnow() -> datetime:
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint(_in_list("role", ROLES), name="ck_users_role"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
@@ -38,6 +59,14 @@ class User(Base):
 
 class EmailRecord(Base):
     __tablename__ = "email_records"
+    __table_args__ = (
+        CheckConstraint(_in_list("status", EMAIL_STATUSES), name="ck_email_status"),
+        CheckConstraint(_in_list("risk_level", RISK_LEVELS), name="ck_email_risk_level"),
+        CheckConstraint("risk_score >= 0 AND risk_score <= 100", name="ck_email_risk_score"),
+        CheckConstraint(_in_list("auth_spf", ("pass", "fail", "none")), name="ck_email_spf"),
+        CheckConstraint(_in_list("auth_dkim", ("pass", "fail", "none")), name="ck_email_dkim"),
+        CheckConstraint(_in_list("auth_dmarc", ("pass", "fail", "none")), name="ck_email_dmarc"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     message_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
@@ -70,6 +99,9 @@ class EmailRecord(Base):
 
 class AnalystReview(Base):
     __tablename__ = "analyst_reviews"
+    __table_args__ = (
+        CheckConstraint(_in_list("action", REVIEW_ACTIONS), name="ck_review_action"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     email_id: Mapped[int] = mapped_column(ForeignKey("email_records.id"), nullable=False, index=True)
@@ -86,6 +118,27 @@ class AnalystReview(Base):
 
 class StaffReleaseRequest(Base):
     __tablename__ = "staff_release_requests"
+    __table_args__ = (
+        CheckConstraint(_in_list("status", REQUEST_STATUSES), name="ck_request_status"),
+        # A decided request must record who decided it, and a pending one must not.
+        CheckConstraint(
+            "(status = 'pending' AND reviewed_by IS NULL AND reviewed_at IS NULL) "
+            "OR (status <> 'pending' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL)",
+            name="ck_request_decision_complete",
+        ),
+        # The API already rejects a duplicate open request, but that check and the
+        # INSERT are two statements: two concurrent submissions could both pass
+        # the check. This partial unique index makes the rule atomic in the
+        # database. Supported by both PostgreSQL and SQLite.
+        Index(
+            "uq_request_one_pending_per_email_user",
+            "email_id",
+            "requested_by",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+            sqlite_where=text("status = 'pending'"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     email_id: Mapped[int] = mapped_column(ForeignKey("email_records.id"), nullable=False, index=True)

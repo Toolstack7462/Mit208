@@ -21,9 +21,10 @@ CREATE TABLE users (
     email           VARCHAR(255) UNIQUE NOT NULL,
     full_name       VARCHAR(255) NOT NULL,
     hashed_password VARCHAR(255) NOT NULL,
-    role            VARCHAR(32)  NOT NULL DEFAULT 'staff',   -- analyst | staff | admin
+    role            VARCHAR(32)  NOT NULL DEFAULT 'staff',
     is_active       BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT ck_users_role CHECK (role IN ('analyst', 'staff', 'admin'))
 );
 CREATE INDEX idx_users_email ON users (email);
 
@@ -45,7 +46,14 @@ CREATE TABLE email_records (
     auth_dmarc    VARCHAR(8)   NOT NULL DEFAULT 'pass',
     ai_generated  BOOLEAN      NOT NULL DEFAULT FALSE,
     received_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    CONSTRAINT ck_email_status CHECK (
+        status IN ('inbox', 'quarantined', 'released', 'confirmed_phishing', 'safe')),
+    CONSTRAINT ck_email_risk_level CHECK (risk_level IN ('low', 'medium', 'high', 'critical')),
+    CONSTRAINT ck_email_risk_score CHECK (risk_score >= 0 AND risk_score <= 100),
+    CONSTRAINT ck_email_spf   CHECK (auth_spf   IN ('pass', 'fail', 'none')),
+    CONSTRAINT ck_email_dkim  CHECK (auth_dkim  IN ('pass', 'fail', 'none')),
+    CONSTRAINT ck_email_dmarc CHECK (auth_dmarc IN ('pass', 'fail', 'none'))
 );
 CREATE INDEX idx_email_status ON email_records (status);
 CREATE INDEX idx_email_recipient ON email_records (recipient);
@@ -58,7 +66,9 @@ CREATE TABLE analyst_reviews (
     action      VARCHAR(32) NOT NULL,                        -- quarantine | release | confirm_phishing | feedback
     verdict     VARCHAR(32),                                 -- phishing | safe | unsure
     feedback    TEXT,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT ck_review_action CHECK (
+        action IN ('quarantine', 'release', 'confirm_phishing', 'feedback'))
 );
 CREATE INDEX idx_review_email ON analyst_reviews (email_id);
 CREATE INDEX idx_review_analyst ON analyst_reviews (analyst_id);
@@ -73,10 +83,22 @@ CREATE TABLE staff_release_requests (
     reviewed_by   INTEGER REFERENCES users (id),
     review_note   TEXT,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    reviewed_at   TIMESTAMPTZ
+    reviewed_at   TIMESTAMPTZ,
+    CONSTRAINT ck_request_status CHECK (status IN ('pending', 'approved', 'denied')),
+    -- A decided request must record its reviewer; a pending one must not.
+    CONSTRAINT ck_request_decision_complete CHECK (
+        (status =  'pending' AND reviewed_by IS     NULL AND reviewed_at IS     NULL) OR
+        (status <> 'pending' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL))
 );
 CREATE INDEX idx_request_status ON staff_release_requests (status);
 CREATE INDEX idx_request_requester ON staff_release_requests (requested_by);
+
+-- The API rejects a duplicate open request, but the check and the INSERT are two
+-- statements, so two concurrent submissions could both pass. This partial unique
+-- index makes "at most one pending request per email per user" atomic.
+CREATE UNIQUE INDEX uq_request_one_pending_per_email_user
+    ON staff_release_requests (email_id, requested_by)
+    WHERE status = 'pending';
 
 -- 5. Audit logs ------------------------------------------------------
 CREATE TABLE audit_logs (

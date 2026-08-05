@@ -1,19 +1,62 @@
-"""Pydantic request/response schemas."""
+"""Pydantic request/response schemas.
+
+Input models declare explicit length and format constraints. These mirror the
+column widths in ``models.py`` / ``database/schema.sql`` so over-long input is
+rejected with a 422 at the API boundary. Without them the request reaches the
+database, where SQLite silently accepts the over-long value but PostgreSQL
+raises StringDataRightTruncation and the client sees an opaque HTTP 500.
+"""
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-# Use plain str for addresses: demo accounts use the non-routable ".local"
-# domain (per the "no real email data" requirement), which strict RFC email
-# validation rejects as a reserved TLD.
+from .security import BCRYPT_MAX_BYTES
+
+# Use plain str for addresses rather than Pydantic's EmailStr: demo accounts use
+# the non-routable ".local" domain (per the "no real email data" requirement),
+# which strict RFC email validation rejects as a reserved TLD. The pattern below
+# is the deliberately permissive substitute.
+_ADDRESS_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+# Column widths from models.py — keep in step with the ORM/DDL.
+MAX_ADDRESS = 320
+MAX_NAME = 255
+MAX_SUBJECT = 500
+MAX_BODY = 100_000
+MAX_REASON = 2_000
+MAX_FEEDBACK = 2_000
+MAX_VERDICT = 32
+
+
+def _validate_address(value: str, field: str) -> str:
+    """Trim, lowercase and format-check an email address."""
+    cleaned = value.strip().lower()
+    if not cleaned:
+        raise ValueError(f"{field} is required")
+    if not _ADDRESS_RE.match(cleaned):
+        raise ValueError(f"{field} must be a valid email address, e.g. name@example.com")
+    return cleaned
+
 
 # ---- Auth -----------------------------------------------------------------
 class LoginRequest(BaseModel):
-    email: str
-    password: str
+    email: str = Field(min_length=1, max_length=MAX_ADDRESS)
+    # 72 is bcrypt's input limit (see security.BCRYPT_MAX_BYTES). Bounding it
+    # here keeps an over-long submission a validation error rather than a value
+    # that can never match any stored hash.
+    password: str = Field(min_length=1, max_length=BCRYPT_MAX_BYTES)
+
+    @field_validator("email")
+    @classmethod
+    def _normalise_email(cls, v: str) -> str:
+        # Login stays lenient on format (a malformed address is simply an
+        # unknown user -> 401) but is normalised so case never blocks a login.
+        return v.strip().lower()
 
 
 class Token(BaseModel):
@@ -66,17 +109,45 @@ class EmailDetailOut(EmailBase):
 
 
 class EmailCreate(BaseModel):
-    sender: str
-    sender_name: str | None = None
-    recipient: str
-    subject: str = ""
-    body: str = ""
+    sender: str = Field(min_length=3, max_length=MAX_ADDRESS)
+    sender_name: str | None = Field(default=None, max_length=MAX_NAME)
+    recipient: str = Field(min_length=3, max_length=MAX_ADDRESS)
+    subject: str = Field(default="", max_length=MAX_SUBJECT)
+    body: str = Field(default="", max_length=MAX_BODY)
+
+    @field_validator("sender")
+    @classmethod
+    def _check_sender(cls, v: str) -> str:
+        return _validate_address(v, "sender")
+
+    @field_validator("recipient")
+    @classmethod
+    def _check_recipient(cls, v: str) -> str:
+        return _validate_address(v, "recipient")
+
+    @field_validator("sender_name", "subject", "body")
+    @classmethod
+    def _strip(cls, v: str | None) -> str | None:
+        return v.strip() if isinstance(v, str) else v
 
 
 class ReviewAction(BaseModel):
     # one of: quarantine | release | confirm_phishing | feedback
-    verdict: str | None = None
-    feedback: str | None = None
+    verdict: str | None = Field(default=None, max_length=MAX_VERDICT)
+    feedback: str | None = Field(default=None, max_length=MAX_FEEDBACK)
+
+    @field_validator("verdict", "feedback")
+    @classmethod
+    def _blank_to_none(cls, v: str | None) -> str | None:
+        """Treat a whitespace-only string as absent.
+
+        Without this, ``{"feedback": "   "}`` would satisfy the "feedback is
+        required" check in the feedback route and store an empty review.
+        """
+        if v is None:
+            return None
+        stripped = v.strip()
+        return stripped or None
 
 
 # ---- Reviews --------------------------------------------------------------
@@ -93,13 +164,33 @@ class ReviewOut(BaseModel):
 
 # ---- Staff release requests ----------------------------------------------
 class ReleaseRequestCreate(BaseModel):
-    email_id: int
-    reason: str = ""
+    email_id: int = Field(gt=0)
+    # A reason is mandatory: an analyst decides on this text alone, and the UI
+    # already prompts for it ("Tell the analyst why..."). 10 characters is the
+    # shortest input that can carry any justification.
+    reason: str = Field(min_length=10, max_length=MAX_REASON)
+
+    @field_validator("reason")
+    @classmethod
+    def _clean_reason(cls, v: str) -> str:
+        cleaned = v.strip()
+        if len(cleaned) < 10:
+            raise ValueError("reason must be at least 10 characters of actual text")
+        return cleaned
 
 
 class ReleaseRequestDecision(BaseModel):
-    status: str  # approved | denied
-    review_note: str | None = None
+    # Constrained here as well as in the route so /docs advertises the allowed
+    # values and a bad value is a 422 body error rather than a hand-rolled check.
+    status: Literal["approved", "denied"]
+    review_note: str | None = Field(default=None, max_length=MAX_REASON)
+
+    @field_validator("review_note")
+    @classmethod
+    def _blank_to_none(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        return v.strip() or None
 
 
 class ReleaseRequestOut(BaseModel):

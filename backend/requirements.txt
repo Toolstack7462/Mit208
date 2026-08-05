@@ -1,10 +1,23 @@
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-SQLAlchemy==2.0.36
-pydantic==2.10.4
-pydantic-settings==2.7.0
-email-validator==2.2.0
-PyJWT==2.10.1
-bcrypt==4.2.1
-python-multipart==0.0.20
-psycopg2-binary==2.9.10
+# PhishGuard backend runtime dependencies.
+#
+# Tested on Python 3.11 - 3.14 (see README, "Local Setup").
+#
+# Pins use the compatible-release operator (~=) instead of exact "==" pins.
+# The previous exact pins blocked installation on Python 3.13/3.14: pydantic-core
+# and psycopg2 only publish binary wheels for the interpreter versions that
+# existed when that patch release was cut, so pip fell back to a source build
+# and failed. "~=" keeps the API-compatible minor version but allows a newer
+# patch release that ships a wheel for the interpreter in use.
+
+fastapi~=0.141.1
+uvicorn[standard]~=0.52.1
+SQLAlchemy~=2.0.51
+pydantic~=2.13.4
+pydantic-settings~=2.14.2
+email-validator~=2.3.0
+PyJWT~=2.13.0
+bcrypt~=5.0.0
+python-multipart~=0.0.32
+
+# PostgreSQL driver. 2.9.12 is the first release with wheels for Python 3.13/3.14.
+psycopg2-binary~=2.9.12

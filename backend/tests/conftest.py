@@ -1,13 +1,27 @@
 """Pytest fixtures for the PhishGuard API test suite.
 
-Each test session runs against an isolated in-memory SQLite database (never the
-real ``phishguard.db``), seeded with the same synthetic users and emails used by
-the demo. The FastAPI ``get_db`` dependency is overridden so the app talks to
+By default each test runs against an isolated in-memory SQLite database (never
+the real ``phishguard.db``), seeded with the same synthetic users and emails used
+by the demo. The FastAPI ``get_db`` dependency is overridden so the app talks to
 the test database.
+
+Running the same suite against PostgreSQL
+-----------------------------------------
+PostgreSQL is the assessed target, and the two engines do not behave identically
+— SQLite ignores declared string lengths, for example. Set ``TEST_DATABASE_URL``
+to run every test against a real PostgreSQL database instead:
+
+    # PowerShell
+    $env:TEST_DATABASE_URL = "postgresql+psycopg2://user:pass@localhost:5432/phishguard_test"
+    python -m pytest
+
+Use a database that exists only for testing: the fixture drops and recreates all
+tables around every test.
 """
 from __future__ import annotations
 
 import json
+import os
 
 import pytest
 from fastapi.testclient import TestClient
@@ -22,13 +36,26 @@ from app.routers.auth import login_limiter
 from app.scoring import score_email
 from app.security import hash_password
 
-# --- Isolated in-memory test database --------------------------------------
-test_engine = create_engine(
-    "sqlite://",
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,  # single shared in-memory connection across threads
-)
+# --- Test database ----------------------------------------------------------
+TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "").strip()
+
+if TEST_DATABASE_URL:
+    # A real server (normally PostgreSQL). No StaticPool: each connection is real,
+    # and pool_pre_ping avoids a stale connection between tests.
+    test_engine = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
+else:
+    test_engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,  # single shared in-memory connection across threads
+    )
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+
+
+def pytest_report_header() -> str:
+    """Name the engine under test, so a run's output says what it proved."""
+    return f"phishguard test database: {test_engine.dialect.name}"
 
 USERS = [
     ("admin@phishguard.local", "Alex Admin", "admin", "Admin@123"),
@@ -77,8 +104,11 @@ def _seed(db):
 
 @pytest.fixture(autouse=True)
 def _setup_database():
-    """Give every test a freshly created + seeded in-memory database so tests
-    stay isolated regardless of the order in which they mutate email state."""
+    """Give every test a freshly created + seeded database so tests stay isolated
+    regardless of the order in which they mutate email state."""
+    # Drop first as well as last: on a real server a previous interrupted run can
+    # leave tables behind, and create_all would then silently reuse dirty data.
+    Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
     db = TestingSessionLocal()
     try:

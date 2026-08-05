@@ -1,0 +1,181 @@
+name: CI
+
+# Runs the full test suite on every push and pull request so the repository
+# carries independent evidence that the submitted code actually builds and passes.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: Backend (pytest, Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The dependency pins previously failed to install on 3.13+; the matrix
+        # keeps that regression from coming back unnoticed.
+        python-version: ["3.11", "3.12", "3.13"]
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run tests with coverage
+        run: python -m pytest --cov=app --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage report
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+          if-no-files-found: warn
+
+  backend-postgres:
+    name: Backend against PostgreSQL
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: phishguard
+          POSTGRES_PASSWORD: phishguard_ci
+          POSTGRES_DB: phishguard_db
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Apply the reference schema (database/schema.sql)
+        env:
+          PGPASSWORD: phishguard_ci
+        # -v ON_ERROR_STOP=1 makes a single bad statement fail the job, so this
+        # genuinely verifies the committed DDL rather than just running it.
+        run: psql -h localhost -U phishguard -d phishguard_db
+             -v ON_ERROR_STOP=1 -f database/schema.sql
+
+      - name: Seed into the schema that psql created
+        working-directory: backend
+        env:
+          # CI-only throwaway credentials for a container that exists for one job.
+          DATABASE_URL: postgresql+psycopg2://phishguard:phishguard_ci@localhost:5432/phishguard_db
+          SECRET_KEY: ci-only-not-a-real-secret-value-0123456789abcdef
+        # Deliberately NOT --reset: that would drop the tables psql just created
+        # and rebuild them from the ORM, so schema.sql would never be exercised.
+        run: |
+          python -m app.seed
+          python -c "
+          from app.database import SessionLocal
+          from app.models import User, EmailRecord
+          db = SessionLocal()
+          users, emails = db.query(User).count(), db.query(EmailRecord).count()
+          print(f'PostgreSQL seed verified: {users} users, {emails} emails')
+          assert users == 4 and emails == 8, 'seed did not populate PostgreSQL as expected'
+          "
+
+      - name: Verify the database constraints reject invalid data
+        env:
+          PGPASSWORD: phishguard_ci
+        # Each statement below MUST fail. If PostgreSQL accepts any of them the
+        # constraint is missing, so the step fails. See docs/BUG_LOG.md, BUG-13.
+        run: |
+          set -e
+          fail_expected() {
+            if psql -h localhost -U phishguard -d phishguard_db \
+                 -v ON_ERROR_STOP=1 -c "$1" >/dev/null 2>&1; then
+              echo "CONSTRAINT MISSING - PostgreSQL accepted: $1"
+              exit 1
+            fi
+            echo "correctly rejected: $2"
+          }
+          fail_expected "INSERT INTO users (email, full_name, hashed_password, role)
+                         VALUES ('rogue@phishguard.local','R','x','superadmin');" "unknown role"
+          fail_expected "UPDATE email_records SET status = 'deleted' WHERE id = 1;" "unknown email status"
+          fail_expected "UPDATE email_records SET risk_score = 1000 WHERE id = 1;" "risk_score out of range"
+          fail_expected "UPDATE email_records SET auth_spf = 'maybe' WHERE id = 1;" "unknown SPF result"
+          fail_expected "INSERT INTO staff_release_requests (email_id, requested_by, reason, status)
+                         SELECT email_id, requested_by, reason, 'pending'
+                         FROM staff_release_requests WHERE status = 'pending' LIMIT 1;" "duplicate pending request"
+          echo "All PostgreSQL constraints verified."
+
+      - name: Verify the ORM emits the same schema on PostgreSQL
+        working-directory: backend
+        env:
+          SECRET_KEY: ci-only-not-a-real-secret-value-0123456789abcdef
+        run: |
+          python -c "
+          from sqlalchemy.schema import CreateTable, CreateIndex
+          from sqlalchemy.dialects import postgresql
+          from app.models import Base
+          pg = postgresql.dialect()
+          checks = 0
+          for t in Base.metadata.sorted_tables:
+              ddl = str(CreateTable(t).compile(dialect=pg))
+              checks += ddl.count('CHECK')
+              for ix in t.indexes:
+                  str(CreateIndex(ix).compile(dialect=pg))
+          print(f'ORM PostgreSQL DDL compiled: {checks} CHECK constraints')
+          assert checks >= 9, 'expected the CHECK constraints to be present'
+          "
+
+  frontend:
+    name: Frontend (vitest + build)
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build

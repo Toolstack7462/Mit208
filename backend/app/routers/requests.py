@@ -7,12 +7,16 @@ from sqlalchemy.orm import Session
 from ..audit import record_audit
 from ..database import get_db
 from ..deps import get_current_user, require_roles
-from ..models import EmailRecord, StaffReleaseRequest, User
+from ..models import AnalystReview, EmailRecord, StaffReleaseRequest, User
 from ..schemas import ReleaseRequestCreate, ReleaseRequestDecision, ReleaseRequestOut
 
 router = APIRouter(prefix="/api/release-requests", tags=["release-requests"])
 
 REVIEWER = require_roles("analyst", "admin")
+
+# Statuses that mean "the recipient cannot read this email yet", i.e. the only
+# states from which a release request is meaningful.
+HOLDABLE_STATUSES = ("quarantined", "confirmed_phishing")
 
 
 def _client_ip(request: Request) -> str | None:
@@ -48,6 +52,35 @@ def create_request(
     if current.role == "staff" and email.recipient != current.email:
         raise HTTPException(status_code=403, detail="You can only request release of your own email")
 
+    # Only a held email can be released. Requesting release of something already
+    # delivered or released produced a pending request that could never change
+    # anything, and cluttered the analyst queue.
+    if email.status not in HOLDABLE_STATUSES:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"This email is not being held (status: {email.status}). "
+                "Only quarantined or confirmed-phishing email can be requested for release."
+            ),
+        )
+
+    # One open request per email per user. Re-submitting used to create an
+    # unlimited number of identical pending rows for the same email.
+    existing = (
+        db.query(StaffReleaseRequest)
+        .filter(
+            StaffReleaseRequest.email_id == payload.email_id,
+            StaffReleaseRequest.requested_by == current.id,
+            StaffReleaseRequest.status == "pending",
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail="You already have a pending release request for this email.",
+        )
+
     req = StaffReleaseRequest(
         email_id=payload.email_id, requested_by=current.id,
         reason=payload.reason, status="pending",
@@ -72,8 +105,8 @@ def decide_request(
     db: Session = Depends(get_db),
     current: User = Depends(REVIEWER),
 ):
-    if payload.status not in ("approved", "denied"):
-        raise HTTPException(status_code=422, detail="status must be 'approved' or 'denied'")
+    # payload.status is constrained to "approved" | "denied" by the schema, so an
+    # unknown value is already rejected as a 422 before reaching this function.
     req = db.get(StaffReleaseRequest, request_id)
     if not req:
         raise HTTPException(status_code=404, detail="Release request not found")
@@ -85,9 +118,19 @@ def decide_request(
     req.review_note = payload.review_note
     req.reviewed_at = datetime.now(timezone.utc)
 
-    # Approving a release also releases the underlying email.
+    # Approving a release also releases the underlying email, and is recorded as
+    # an analyst review so that every status change on an email has a matching
+    # row in analyst_reviews — previously only direct analyst actions did.
     if payload.status == "approved" and req.email:
         req.email.status = "released"
+        db.add(AnalystReview(
+            email_id=req.email_id,
+            analyst_id=current.id,
+            action="release",
+            verdict="safe",
+            feedback=f"Released via staff request #{req.id}."
+                     + (f" Note: {payload.review_note}" if payload.review_note else ""),
+        ))
 
     record_audit(
         db, user=current, action=f"release_request_{payload.status}",

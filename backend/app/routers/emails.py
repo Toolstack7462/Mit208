@@ -1,5 +1,7 @@
 """Email records + analyst actions (quarantine, release, confirm, feedback)."""
 import json
+import logging
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
@@ -14,6 +16,33 @@ from ..scoring import score_email
 router = APIRouter(prefix="/api/emails", tags=["emails"])
 
 ANALYST = require_roles("analyst", "admin")
+
+logger = logging.getLogger(__name__)
+
+_UNREADABLE_REASONS = [
+    "Stored risk explanation could not be read; the recorded score and level are unchanged."
+]
+
+
+def parse_score_reasons(raw: str | None) -> list[str]:
+    """Read ``score_reasons`` without letting a corrupt value hide the email.
+
+    ``score_reasons`` holds a JSON array. Parsing it directly meant one bad row
+    made that email permanently unopenable (HTTP 500) even though every other
+    field was intact. The score and level live in their own columns, so a
+    placeholder explanation is far better than losing access to the record.
+    """
+    if not raw:
+        return []
+    try:
+        parsed = json.loads(raw)
+    except (ValueError, TypeError):
+        logger.warning("Unparseable score_reasons; serving a placeholder explanation.")
+        return list(_UNREADABLE_REASONS)
+    if isinstance(parsed, list):
+        return [str(item) for item in parsed]
+    # Valid JSON but not the expected array (e.g. a bare string or object).
+    return [str(parsed)] if parsed else []
 
 
 def _client_ip(request: Request) -> str | None:
@@ -37,9 +66,13 @@ def list_emails(
     if risk_level:
         q = q.filter(EmailRecord.risk_level == risk_level)
     if search:
-        like = f"%{search.lower()}%"
+        # Escape LIKE wildcards so a search for "100%" or "a_b" is treated as
+        # literal text instead of matching every row.
+        escaped = search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        like = f"%{escaped}%"
         q = q.filter(
-            (EmailRecord.subject.ilike(like)) | (EmailRecord.sender.ilike(like))
+            EmailRecord.subject.ilike(like, escape="\\")
+            | EmailRecord.sender.ilike(like, escape="\\")
         )
     return q.order_by(EmailRecord.risk_score.desc(), EmailRecord.received_at.desc()).all()
 
@@ -52,7 +85,7 @@ def get_email(email_id: int, db: Session = Depends(get_db), current: User = Depe
     if current.role == "staff" and email.recipient != current.email:
         raise HTTPException(status_code=403, detail="Not authorised to view this email")
     data = EmailDetailOut.model_validate(email).model_dump()
-    data["reasons"] = json.loads(email.score_reasons or "[]")
+    data["reasons"] = parse_score_reasons(email.score_reasons)
     return data
 
 
@@ -65,9 +98,12 @@ def create_email(
 ):
     """Ingest a new email; the rule engine scores it on arrival."""
     result = score_email(payload.sender, payload.subject, payload.body, payload.sender_name)
-    count = db.query(EmailRecord).count()
+    # message_id must be unique. It was previously derived from the current row
+    # count, so two ingests racing on the same count produced the same id and the
+    # second failed with an opaque IntegrityError. A random suffix removes the
+    # dependency on table state entirely.
     email = EmailRecord(
-        message_id=f"<demo-{count + 1}-{payload.recipient}>",
+        message_id=f"<ingest-{uuid4().hex[:16]}@phishguard.local>",
         sender=payload.sender,
         sender_name=payload.sender_name,
         recipient=payload.recipient,
@@ -99,6 +135,15 @@ def _apply_action(
     db: Session, request: Request, current: User, email: EmailRecord,
     action: str, new_status: str | None, payload: ReviewAction,
 ):
+    # Reject an action that would not change anything. Repeating it previously
+    # succeeded and appended a duplicate review + audit row for a state change
+    # that never happened, which made the audit trail misleading.
+    if new_status and email.status == new_status:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Email is already '{new_status}'; no action taken.",
+        )
+
     review = AnalystReview(
         email_id=email.id, analyst_id=current.id, action=action,
         verdict=payload.verdict, feedback=payload.feedback,

@@ -139,8 +139,9 @@ your route through the application.
 **On screen (3:34):** dashboard error state with the API blocked.
 
 > "Every action is recorded here with the actor, the action, the entity, a
-> readable detail and the IP address. The table is append-only — no route in the
-> application updates or deletes an audit row.
+> readable detail and the IP address. The table is append-only at the application
+> level — no route updates or deletes an audit row. I'm not claiming it's immutable
+> storage, though: someone with direct database access could still change it.
 >
 > Access control is enforced server-side. As a staff member I'm redirected away
 > from the audit page, and the API independently returns 403 — the route guard in
@@ -166,7 +167,7 @@ your route through the application.
 > wired in. There's no live mail ingestion and no HTTPS in this local demo.
 >
 > The code, the setup instructions and this evidence are all in the repository,
-> tagged v1.1-final. Thanks for watching."
+> tagged v1.3-final. Thanks for watching."
 
 ---
 

@@ -42,7 +42,7 @@ SHOTS = HERE / "screenshots"
 FIGURES = HERE / "figures"
 TMP = HERE / "_pptx_tmp"
 
-TAG = "v1.2-final"
+TAG = "v1.3-final"
 REPO = "github.com/Toolstack7462/Mit208"
 
 # Deck palette and type, read off the existing shapes.
@@ -87,7 +87,7 @@ REPLACEMENTS: list[tuple[str, str]] = [
      f"Assessed version: tag {TAG}"),
     ("Final repository: Toolstack7462/Mit208", f"Repository: {REPO}"),
     ("LIVE APPLICATION - CAPTURED 5 AUG 2026", "LIVE APPLICATION - CAPTURED 11 AUG 2026"),
-    ("Prepared 5 August 2026", "Prepared 11 August 2026"),
+    ("Prepared 5 August 2026", "Prepared 12 August 2026"),
 
     # --- Slide 3: the rate-limiting claim was wrong ------------------------
     # A per-IP failed-login limiter is implemented in app/ratelimit.py. What the
@@ -133,7 +133,7 @@ REPLACEMENTS: list[tuple[str, str]] = [
     ("Run PostgreSQL + npm test/build + final browser workflow",
      "PostgreSQL 16.6 verified: schema, seed, constraints, suite, smoke"),
     ("Capture final screenshots and rerun all tests",
-     "22 screenshots and a 4-minute capture from the running app"),
+     "24 screenshots and a 4-minute capture from the running app"),
     ("Push truthful commits and obtain passing CI",
      f"Assessed version tagged {TAG}; earlier tags left in place"),
     ("Create v1.0-final, record video and rehearse live defence",
@@ -194,7 +194,7 @@ NOTES: list[tuple[int, str, str]] = [
         "1600px screen shrunk to a thumbnail renders its text at about 2pt. Walk the "
         "four steps in order; do not read the captions aloud."),
     (8, "Evidence: evidence/screenshots (17 images with an index).",
-        "Evidence: evidence/screenshots (22 images with a generated index). The same "
+        "Evidence: evidence/screenshots (24 images with a generated index). The same "
         "four crops are Figure 3 in the report."),
     (10, "Close on outcome and honesty: the core MVP works end to end, is covered by "
          "179 automated tests plus 20 live checks, and is reproducible from the "
@@ -482,7 +482,7 @@ def rebuild_slide8(prs) -> None:
     textbox(slide, X0, 6.62, CONTENT_W, 0.26,
             "Also captured: the refused duplicate request (409), the refused short "
             "justification (422), the disabled invalid transition and the "
-            "API-unreachable error state — all 22 images are in evidence/screenshots.",
+            "API-unreachable error state — all 24 images are in evidence/screenshots.",
             size=9.5, bold=True, colour=RGBColor(0xB6, 0x3A, 0x3A), align=PP_ALIGN.CENTER)
 
 

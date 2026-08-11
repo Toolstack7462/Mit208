@@ -1,7 +1,8 @@
 # PhishGuard — Test Strategy, Evidence and Results
 
 Every figure below was produced by running the commands shown, on this
-repository, on **11 August 2026**. Nothing here is estimated.
+repository, on **11 August 2026** and re-run unchanged on **12 August 2026** as part
+of the final documentation audit. Nothing here is estimated.
 
 **Environment:** Windows 11, Python 3.14.3, Node.js 24.14.1, PostgreSQL 16.6.
 The suite runs on in-memory SQLite by default and on PostgreSQL when
@@ -18,7 +19,7 @@ The suite runs on in-memory SQLite by default and on PostgreSQL when
 | Backend unit + API (**PostgreSQL 16.6**) | pytest 9.1.1 | 9 | **170** | **170 passed** |
 | Frontend unit + component | vitest 2.1.9 | 11 | **92** | **92 passed** |
 | Live end-to-end (running server) | `smoke_test.py` | 1 | **22 checks** | **22/22 passed** |
-| Production build | `vite build` | — | — | **built in 17.77s**, 1655 modules |
+| Production build | `vite build` | — | — | **built in 16.70s**, 1655 modules |
 | Secret scan | `evidence/secret_scan.py` | every tracked file | — | **0 unacknowledged findings** |
 | **Total automated** | | **20** | **262** | **262 passed, 0 failed** |
 

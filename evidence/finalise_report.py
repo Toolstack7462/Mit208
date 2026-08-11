@@ -45,9 +45,9 @@ FIGURES = HERE / "figures"
 SHOTS = HERE / "screenshots"
 
 REPO_URL = "https://github.com/Toolstack7462/Mit208"
-# The assessed version. v1.0-final and v1.1-final are earlier markers, left exactly
-# where they were pointing rather than moved, so the history stays honest.
-TAG = "v1.2-final"
+# The assessed version. The earlier *-final tags are intermediate markers, left
+# exactly where they point rather than moved, so the history stays honest.
+TAG = "v1.3-final"
 TAG_URL = f"{REPO_URL}/releases/tag/{TAG}"
 BLANK = "_" * 34            # a ruled fill-in field, not a placeholder to delete
 
@@ -278,7 +278,7 @@ BODY = {
         "model. The implementation completes the core workflow and enforces role and "
         "state rules on the server and in the database. It is verified by 170 backend "
         "tests at 90 per cent statement coverage on both SQLite and PostgreSQL 16.6, "
-        "92 frontend tests, and 22 live API checks per engine, plus 22 screenshots and "
+        "92 frontend tests, and 22 live API checks per engine, plus 24 screenshots and "
         "a four-minute walkthrough of the running application."
     ),
 
@@ -460,7 +460,7 @@ BODY = {
         "evidence and repeatable testing. The final review improved reliability and "
         "security without replacing the architecture or overstating the rule engine as "
         "machine learning. It is supported by 262 automated tests, 22 live API checks on "
-        "each database engine, 22 labelled screenshots and a recording of the running "
+        "each database engine, 24 labelled screenshots and a recording of the running "
         "application, all reproducible from the repository. The honest remaining gap is "
         "the recorded narration. Realistic next steps are a browser-level test suite and "
         "stronger session controls."
@@ -521,7 +521,7 @@ TABLE1 = [
     ["Live API smoke workflow", "22 of 22 passed",
      "Real running server, repeated on each engine"],
     ["Frontend tests (vitest)", "92 passed across 11 files",
-     "jsdom; production build 1,655 modules in 17.77s"],
+     "jsdom; production build 1,655 modules in 16.70s"],
     ["Database integrity, raw SQL", "6 of 6 invalid writes rejected",
      "PostgreSQL 16.6: ten CHECK constraints and a partial unique index"],
     ["Secret scan", "0 unacknowledged findings",
@@ -780,13 +780,12 @@ def load_ci() -> tuple[dict, list[list[str]]]:
     )
     rec["note"] = (
         f"The assessed version is the annotated tag {rec['tag']}, which points at commit "
-        f"{rec['sha'][:7]} — the commit the run above tested. Two earlier tags, v1.0-final "
-        f"and v1.1-final, mark intermediate states; neither was moved, because rewriting a "
-        f"pushed tag would make the history misleading. No GitHub Release object is "
-        f"published: the tag is the version marker and resolves publicly at the address in "
-        f"Figure E2. The commits after the tag carry no application code: they hold the two "
-        f"images on the next two pages, the JSON record behind this table, and documentation "
-        f"corrections — evidence captured from a tag cannot be committed before that tag "
+        f"{rec['sha'][:7]} — the commit the run above tested, and the address in Figure E2. "
+        f"The earlier v1.0, v1.1 and v1.2 final tags mark intermediate states; none was "
+        f"moved, because rewriting a pushed tag would make the history misleading about what "
+        f"was tested when. Any commit after the tag carries no application code: only "
+        f"evidence captured from the tag — the two images on the next two pages and the JSON "
+        f"record behind this table — which cannot be committed before the tag it documents "
         f"exists."
     )
     return rec, rows
@@ -829,7 +828,7 @@ def main() -> int:
         if t.rows[0].cells[0].text.strip().upper().startswith("IMPORTANT"):
             delete(t)
             break
-    set_text(find(doc, "Prepared 5 August"), "Prepared 11 August 2026")
+    set_text(find(doc, "Prepared 5 August"), "Prepared 12 August 2026")
 
     # -- 2. Body text -------------------------------------------------------
     counts: list[tuple[str, int]] = []
@@ -847,7 +846,7 @@ def main() -> int:
     results_table = doc.tables[2]        # after the IMPORTANT box was removed
     delete(results_table)
     cap = add_caption(doc, old_cap, "Table 1. Verified results of the run on "
-                                    "11 August 2026. Source: docs/TESTING.md.", above=True)
+                                    "12 August 2026. Source: docs/TESTING.md.", above=True)
     delete(old_cap)
     build_table(doc, cap, TABLE1, [2.20, 1.90, 2.75])
 
@@ -988,7 +987,7 @@ def main() -> int:
         ("Heading 1", "Appendix F — Full-page interface screenshots"),
         ("Normal",
          "Captured at 3200 x 2000 from the application running on PostgreSQL 16.6. The "
-         "full set of 22 images and their generated index are in evidence/screenshots/."),
+         "full set of 24 images and their generated index are in evidence/screenshots/."),
     ]
 
     anchor = tail

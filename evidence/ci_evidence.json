@@ -1,21 +1,25 @@
 {
-  "run_number": 4,
-  "run_id": 31510857246,
-  "run_url": "https://github.com/Toolstack7462/Mit208/actions/runs/31510857246",
-  "sha": "d1df3243076fb3308598369bbb6bbb19ae902f6d",
+  "run_number": 8,
+  "run_id": 31523179082,
+  "run_url": "https://github.com/Toolstack7462/Mit208/actions/runs/31523179082",
+  "sha": "752c8adb32a028a984f7a7562c29686ea1592e28",
   "conclusion": "success",
-  "created_at": "2026-08-11T16:08:55Z",
+  "created_at": "2026-08-11T18:31:40Z",
   "jobs": [
+    {
+      "name": "Secret scan",
+      "conclusion": "success"
+    },
     {
       "name": "Frontend (vitest + build)",
       "conclusion": "success"
     },
     {
-      "name": "Backend against PostgreSQL",
+      "name": "Backend (pytest, Python 3.13)",
       "conclusion": "success"
     },
     {
-      "name": "Secret scan",
+      "name": "Backend against PostgreSQL",
       "conclusion": "success"
     },
     {
@@ -25,14 +29,10 @@
     {
       "name": "Backend (pytest, Python 3.11)",
       "conclusion": "success"
-    },
-    {
-      "name": "Backend (pytest, Python 3.13)",
-      "conclusion": "success"
     }
   ],
-  "tag": "v1.1-final",
-  "tag_url": "https://github.com/Toolstack7462/Mit208/releases/tag/v1.1-final",
+  "tag": "v1.2-final",
+  "tag_url": "https://github.com/Toolstack7462/Mit208/releases/tag/v1.2-final",
   "run_shot": "23-ci-run-passing.png",
   "tag_shot": "24-release-tag.png"
 }

@@ -38,9 +38,9 @@ Captured by `evidence/capture_postgres_evidence.py` against the application runn
 
 ## Continuous integration and release evidence
 
-Captured by `evidence/capture_ci_evidence.py`, which reads the run from the GitHub API and refuses to write anything unless it passed. Run #4 on commit d1df324, all 6 jobs green.
+Captured by `evidence/capture_ci_evidence.py`, which reads the run from the GitHub API and refuses to write anything unless it passed. Run #8 on commit 752c8ad, all 6 jobs green.
 
 | File | What it shows |
 |---|---|
-| `23-ci-run-passing.png` | GitHub Actions run #4 on the public repository, every job green |
-| `24-release-tag.png` | The assessed version, tag v1.1-final, on the public repository |
+| `23-ci-run-passing.png` | GitHub Actions run #8 on the public repository, every job green |
+| `24-release-tag.png` | The assessed version, tag v1.2-final, on the public repository |

@@ -59,27 +59,27 @@ def require_postgres() -> dict:
 
 
 def run(page) -> None:
-    # 18 — the engine the API reports, straight from the endpoint.
+    # 20 — the engine the API reports, straight from the endpoint.
     page.goto(f"{API}/system/database-status", wait_until="networkidle")
-    shot(page, "18-postgresql-database-status",
+    shot(page, "20-postgresql-database-status",
          "The API reporting PostgreSQL as the live engine, with using_fallback "
          "false — credentials are never included, only the URL scheme")
 
-    # 19 — the same workflow, rendered from PostgreSQL data.
+    # 21 — the same workflow, rendered from PostgreSQL data.
     page.goto(f"{BASE}/login", wait_until="networkidle")
     page.fill("#login-email", ANALYST[0])
     page.fill("#login-password", ANALYST[1])
     page.click("button:has-text('Sign In')")
     page.wait_for_url("**/dashboard", timeout=15000)
     page.wait_for_load_state("networkidle")
-    shot(page, "19-postgresql-dashboard",
-         "The analyst dashboard served from PostgreSQL — the same workflow as the "
-         "SQLite captures, on the assessed target database")
+    shot(page, "21-postgresql-dashboard",
+         "The analyst dashboard rendered from PostgreSQL data, on the assessed "
+         "target database rather than the SQLite fallback")
 
-    # 20 — the validation that only matters on PostgreSQL.
+    # 22 — the generated API surface, served from the PostgreSQL-backed app.
     page.goto(f"{API}/docs", wait_until="networkidle")
     page.wait_for_timeout(1500)
-    shot(page, "20-postgresql-openapi",
+    shot(page, "22-postgresql-openapi",
          "OpenAPI documentation served by the backend while connected to PostgreSQL")
 
 
@@ -95,16 +95,23 @@ def main() -> int:
             context.close()
             browser.close()
 
+    # Rewrite the PostgreSQL section rather than appending it, so running this
+    # script twice does not leave two copies in the index.
     index = OUT / "INDEX.md"
+    heading = "## PostgreSQL evidence"
     if index.exists():
-        with open(index, "a", encoding="utf-8") as fh:
-            fh.write("\n## PostgreSQL evidence\n\n")
-            fh.write("Captured by `evidence/capture_postgres_evidence.py` against the "
-                     "application running on PostgreSQL 16.6, which the script verifies "
-                     "before taking a single image.\n\n")
-            fh.write("| File | What it shows |\n|---|---|\n")
-            for name, desc in shots:
-                fh.write(f"| `{name}` | {desc} |\n")
+        body = index.read_text(encoding="utf-8")
+        body = body.split(heading)[0].rstrip() + "\n"
+        section = [
+            f"\n{heading}\n",
+            "Captured by `evidence/capture_postgres_evidence.py` against the "
+            "application running on PostgreSQL 16.6, which the script verifies "
+            "before taking a single image.\n",
+            "| File | What it shows |",
+            "|---|---|",
+        ]
+        section += [f"| `{name}` | {desc} |" for name, desc in shots]
+        index.write_text(body + "\n".join(section) + "\n", encoding="utf-8")
     print(f"\n{len(shots)} PostgreSQL screenshots written to {OUT}")
     return 0
 

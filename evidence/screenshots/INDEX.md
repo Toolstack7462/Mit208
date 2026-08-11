@@ -2,6 +2,8 @@
 
 Captured from the running application by `evidence/capture_screenshots.py` (Playwright + Chromium, 1600x1000 at 2x). No image is edited or mocked.
 
+Database engine serving these captures: **PostgreSQL (using_fallback=False)**. The script reads that from `/system/database-status` as it runs, so the index cannot claim an engine the application was not using.
+
 | # | File | What it shows |
 |---|---|---|
 | 01 | `01-login.png` | Sign-in screen with role-based demo accounts |
@@ -21,6 +23,8 @@ Captured from the running application by `evidence/capture_screenshots.py` (Play
 | 15 | `15-staff-denied-audit-access.png` | Staff navigating to /audit is redirected to the dashboard; the API also returns 403 independently of the UI |
 | 16 | `16-error-state-api-unreachable.png` | Dashboard when the API cannot be reached: an explicit, retryable error instead of an empty or permanently loading screen |
 | 17 | `17-openapi-docs.png` | Interactive OpenAPI documentation generated from the FastAPI application |
+| 18 | `18-invalid-transition-blocked.png` | Delivered email selected: Release is disabled because the API accepts it only from quarantined or confirmed_phishing, while Quarantine and Confirm Phishing stay available |
+| 19 | `19-release-request-not-applicable.png` | Staff view of a delivered email: the request button reads 'Already Delivered' and is disabled, because a release request applies only to email that is being held |
 
 ## PostgreSQL evidence
 
@@ -28,6 +32,6 @@ Captured by `evidence/capture_postgres_evidence.py` against the application runn
 
 | File | What it shows |
 |---|---|
-| `18-postgresql-database-status.png` | The API reporting PostgreSQL as the live engine, with using_fallback false — credentials are never included, only the URL scheme |
-| `19-postgresql-dashboard.png` | The analyst dashboard served from PostgreSQL — the same workflow as the SQLite captures, on the assessed target database |
-| `20-postgresql-openapi.png` | OpenAPI documentation served by the backend while connected to PostgreSQL |
+| `20-postgresql-database-status.png` | The API reporting PostgreSQL as the live engine, with using_fallback false — credentials are never included, only the URL scheme |
+| `21-postgresql-dashboard.png` | The analyst dashboard served from PostgreSQL — the same workflow as the SQLite captures, on the assessed target database |
+| `22-postgresql-openapi.png` | OpenAPI documentation served by the backend while connected to PostgreSQL |

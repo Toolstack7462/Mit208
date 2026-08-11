@@ -14,12 +14,16 @@ Usage:
 """
 from __future__ import annotations
 
+import json
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
 BASE = "http://localhost:5173"
+API = "http://127.0.0.1:8000"
 OUT = Path(__file__).resolve().parent / "screenshots"
 
 # 1600x1000 at deviceScaleFactor 2 renders at 3200x2000, which stays sharp when a
@@ -42,9 +46,39 @@ def shot(page, name: str, description: str) -> None:
     print(f"  captured {name}.png  -- {description}")
 
 
+def engine() -> str:
+    """Which database the application is actually serving from, for the index.
+
+    Recorded rather than enforced: these captures are legitimate on either engine.
+    It is written into INDEX.md so the evidence states its own provenance instead
+    of relying on a sentence in the README that nothing checks.
+    """
+    try:
+        with urllib.request.urlopen(f"{API}/system/database-status", timeout=15) as r:
+            status = json.loads(r.read())
+    except (urllib.error.URLError, OSError, ValueError):
+        return "not reported (the /system/database-status endpoint was unreachable)"
+    return f"{status.get('type', status.get('engine'))} (using_fallback={status.get('using_fallback')})"
+
+
 def sign_out(page) -> None:
-    """Clear the stored session so the next login starts clean."""
+    """Clear the stored session so the next login starts clean.
+
+    localStorage is per-origin, so this must run on the frontend origin. Step 17
+    leaves the browser on the API's /docs page; clearing there silently emptied
+    the wrong origin and the next login() then found itself already signed in.
+    """
+    if not page.url.startswith(BASE):
+        page.goto(f"{BASE}/", wait_until="domcontentloaded")
     page.evaluate("() => { localStorage.clear(); }")
+
+
+def select_row_with_status(page, status_label: str) -> None:
+    """Open the first email in the list whose status badge reads ``status_label``."""
+    row = page.locator("div.divide-y > button", has_text=status_label).first
+    row.wait_for(timeout=15000)
+    row.click()
+    page.wait_for_timeout(1000)
 
 
 def login(page, email: str, password: str) -> None:
@@ -172,6 +206,28 @@ def run(page) -> None:
     shot(page, "17-openapi-docs",
          "Interactive OpenAPI documentation generated from the FastAPI application")
 
+    # ---- 18 State machine: invalid analyst actions are not offered ---------
+    # BUG-17 evidence. All three status-changing buttons used to be live on
+    # every email; now the panel offers only the transitions the API accepts.
+    sign_out(page)
+    login(page, *ANALYST)
+    page.goto(f"{BASE}/inbox", wait_until="networkidle")
+    select_row_with_status(page, "Inbox")
+    shot(page, "18-invalid-transition-blocked",
+         "Delivered email selected: Release is disabled because the API accepts it "
+         "only from quarantined or confirmed_phishing, while Quarantine and "
+         "Confirm Phishing stay available")
+
+    # ---- 19 The same rule in the staff view -------------------------------
+    sign_out(page)
+    login(page, *STAFF)
+    page.goto(f"{BASE}/staff", wait_until="networkidle")
+    select_row_with_status(page, "Inbox")
+    shot(page, "19-release-request-not-applicable",
+         "Staff view of a delivered email: the request button reads 'Already "
+         "Delivered' and is disabled, because a release request applies only to "
+         "email that is being held")
+
 
 def main() -> int:
     with sync_playwright() as p:
@@ -191,6 +247,9 @@ def main() -> int:
                  "`evidence/capture_screenshots.py` (Playwright + Chromium, "
                  f"{VIEWPORT['width']}x{VIEWPORT['height']} at {SCALE}x). "
                  "No image is edited or mocked.\n\n")
+        fh.write(f"Database engine serving these captures: **{engine()}**. The "
+                 "script reads that from `/system/database-status` as it runs, so "
+                 "the index cannot claim an engine the application was not using.\n\n")
         fh.write("| # | File | What it shows |\n|---|---|---|\n")
         for i, (name, desc) in enumerate(shots, 1):
             fh.write(f"| {i:02d} | `{name}` | {desc} |\n")

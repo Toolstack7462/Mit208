@@ -12,7 +12,7 @@ PostgreSQL is the assessed target, and the two engines do not behave identically
 to run every test against a real PostgreSQL database instead:
 
     # PowerShell
-    $env:TEST_DATABASE_URL = "postgresql+psycopg2://user:pass@localhost:5432/phishguard_test"
+    $env:TEST_DATABASE_URL = "postgresql+psycopg2://USER:PASSWORD@localhost:5432/phishguard_test"
     python -m pytest
 
 Use a database that exists only for testing: the fixture drops and recreates all

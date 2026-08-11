@@ -169,6 +169,27 @@ jobs:
           assert checks >= 9, 'expected the CHECK constraints to be present'
           "
 
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+
+    steps:
+      # fetch-depth 0 so the scan sees the tracked file list of the whole
+      # repository, not just the tip commit's tree.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Exits non-zero on any unacknowledged credential, key or token, so the
+      # "no secrets are committed" claim is checked by machine on every push
+      # rather than asserted in prose. Uses the standard library only.
+      - name: Scan tracked files for committed secrets
+        run: python evidence/secret_scan.py
+
   frontend:
     name: Frontend (vitest + build)
     runs-on: ubuntu-latest

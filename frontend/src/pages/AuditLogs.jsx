@@ -51,8 +51,11 @@ export default function AuditLogs() {
   ).length;
   const requestEvents = logs.filter((l) => l.action.startsWith("release_request")).length;
 
+  // "Immutable" overstated what the application does: the rows are written once
+  // and no route updates or deletes them, but nothing stops a database
+  // administrator editing the table. "Append-only" is the accurate claim.
   return (
-    <Layout title="Audit Logs" subtitle="Immutable record of every action taken in PhishGuard">
+    <Layout title="Audit Logs" subtitle="Append-only record of every action taken in PhishGuard">
       {/* Intro banner */}
       <div className="mb-5 flex items-start gap-4 rounded-xl border border-brand/20 bg-brand/5 p-5">
         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand/10 text-brand">

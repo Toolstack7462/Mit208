@@ -6,6 +6,7 @@ import RiskBadge from "../components/RiskBadge";
 import EmailDetailPanel from "../components/EmailDetailPanel";
 import api from "../api";
 import { STATUS_META, formatDate } from "../lib/risk";
+import { HOLDABLE_STATUSES } from "../lib/transitions";
 import { errorMessage, errorRequestId } from "../lib/errors";
 import { ErrorBlock, LoadingBlock } from "../components/StateBlock";
 
@@ -13,10 +14,6 @@ import { ErrorBlock, LoadingBlock } from "../components/StateBlock";
 // user is told what is wrong before the request is sent.
 const MIN_REASON_LENGTH = 10;
 const MAX_REASON_LENGTH = 2000;
-
-// Only these statuses mean the email is being withheld, so only these can be
-// the subject of a release request. Mirrors HOLDABLE_STATUSES in the backend.
-const HELD_STATUSES = ["quarantined", "confirmed_phishing"];
 
 function MiniStat({ icon: Icon, label, value, tone }) {
   const tones = {
@@ -110,7 +107,7 @@ export default function StaffPortal() {
       return;
     }
     if (action === "request-release") {
-      if (!HELD_STATUSES.includes(detail.status)) {
+      if (!HOLDABLE_STATUSES.includes(detail.status)) {
         flash("This email is not being held, so it does not need releasing.", "error");
         return;
       }
@@ -153,7 +150,7 @@ export default function StaffPortal() {
     }
   }
 
-  const heldCount = emails.filter((e) => ["quarantined", "confirmed_phishing"].includes(e.status)).length;
+  const heldCount = emails.filter((e) => HOLDABLE_STATUSES.includes(e.status)).length;
 
   return (
     <Layout title="Staff Portal" subtitle="Your mailbox — request release of held emails you trust">

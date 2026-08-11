@@ -13,6 +13,7 @@ import {
   Cpu,
 } from "lucide-react";
 import { riskCategory, CATEGORY_META, STATUS_META, formatDate } from "../lib/risk";
+import { isAllowed, unavailableReason, HOLDABLE_STATUSES } from "../lib/transitions";
 
 function AuthCard({ name, value }) {
   const map = {
@@ -31,6 +32,23 @@ function AuthCard({ name, value }) {
     </div>
   );
 }
+
+// The three status-changing analyst actions, in the order they appear. `action`
+// is the name the state machine uses; `endpoint` is the API path segment.
+const ANALYST_ACTIONS = [
+  { action: "quarantine", endpoint: "quarantine", label: "Quarantine", Icon: ShieldAlert, cls: "btn-outline-danger" },
+  { action: "release", endpoint: "release", label: "Release", Icon: ShieldCheck, cls: "btn-success" },
+  { action: "confirm_phishing", endpoint: "confirm-phishing", label: "Confirm Phishing", Icon: AlertTriangle, cls: "btn-danger" },
+];
+
+// What the staff button says for each status it cannot act on.
+const STAFF_REQUEST_LABEL = {
+  quarantined: "Request Email Release",
+  confirmed_phishing: "Request Email Release",
+  released: "Already Released",
+  inbox: "Already Delivered",
+  safe: "Already Delivered",
+};
 
 export default function EmailDetailPanel({ email, mode = "analyst", busy, onAction, copiedId }) {
   const [showFeedback, setShowFeedback] = useState(false);
@@ -74,19 +92,26 @@ export default function EmailDetailPanel({ email, mode = "analyst", busy, onActi
           to {email.recipient} · {formatDate(email.received_at)}
         </div>
 
-        {/* Action buttons directly under the subject */}
+        {/* Action buttons directly under the subject. Only the transitions the
+            server will accept for this email's current status are enabled. */}
         <div className="mt-4 flex flex-wrap gap-2">
           {mode === "analyst" ? (
             <>
-              <button className="btn-outline-danger btn-sm" disabled={busy} onClick={() => onAction("quarantine")}>
-                <ShieldAlert className="h-4 w-4" /> Quarantine
-              </button>
-              <button className="btn-success btn-sm" disabled={busy} onClick={() => onAction("release")}>
-                <ShieldCheck className="h-4 w-4" /> Release
-              </button>
-              <button className="btn-danger btn-sm" disabled={busy} onClick={() => onAction("confirm-phishing")}>
-                <AlertTriangle className="h-4 w-4" /> Confirm Phishing
-              </button>
+              {ANALYST_ACTIONS.map(({ action, endpoint, label, Icon, cls }) => {
+                const ok = isAllowed(action, email.status);
+                return (
+                  <button
+                    key={action}
+                    className={`${cls} btn-sm`}
+                    disabled={busy || !ok}
+                    title={ok ? undefined : unavailableReason(action, email.status)}
+                    onClick={() => onAction(endpoint)}
+                  >
+                    <Icon className="h-4 w-4" /> {label}
+                  </button>
+                );
+              })}
+              {/* Feedback changes no status, so it is valid from every state. */}
               <button className="btn-outline btn-sm" disabled={busy} onClick={() => setShowFeedback((s) => !s)}>
                 <Send className="h-4 w-4" /> Submit Feedback
               </button>
@@ -94,11 +119,16 @@ export default function EmailDetailPanel({ email, mode = "analyst", busy, onActi
           ) : (
             <button
               className="btn-primary btn-sm"
-              disabled={busy || email.status === "released"}
+              disabled={busy || !HOLDABLE_STATUSES.includes(email.status)}
+              title={
+                HOLDABLE_STATUSES.includes(email.status)
+                  ? undefined
+                  : "A release request applies only to email that is being held."
+              }
               onClick={() => onAction("request-release")}
             >
               <Send className="h-4 w-4" />
-              {email.status === "released" ? "Already Released" : "Request Email Release"}
+              {STAFF_REQUEST_LABEL[email.status] || "Not Held"}
             </button>
           )}
           <button className="btn-ghost btn-sm" onClick={() => onAction("copy-id")}>

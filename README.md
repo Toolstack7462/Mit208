@@ -21,7 +21,7 @@ real email data is used.
 | Interactive API documentation | http://localhost:8000/docs |
 | Database | PostgreSQL `phishguard_db` (SQLite fallback available) |
 
-**Assessed version:** [`v1.3-final`](https://github.com/Toolstack7462/Mit208/releases/tag/v1.3-final).
+**Assessed version:** [`v1.4-final`](https://github.com/Toolstack7462/Mit208/releases/tag/v1.4-final).
 Earlier `*-final` tags mark intermediate states and were left where they point
 rather than moved.
 
@@ -87,11 +87,11 @@ own held mail and request release), and administrators (full oversight).
   bcrypt password hashing.
 - Rule-based phishing risk scoring (0–100) with fully explainable indicators:
   sender impersonation, urgency language, credential harvesting, look-alike
-  links, raw-IP links, URL shorteners, risky attachments, and AI-generated-copy
+  links, raw-IP links, URL shorteners, risky attachments, and templated-language
   detection.
 - Email inbox with filter tabs — All, High Risk, Uncertain, Safe — and
   colour-coded risk badges (High Risk red, Uncertain amber, Safe green).
-- Email detail view showing the risk score, an AI-generated content tag,
+- Email detail view showing the risk score, a templated-language tag,
   simulated SPF/DKIM/DMARC authentication results, and the list of threat
   indicators.
 - Analyst actions: quarantine, release, confirm phishing, and submit feedback.

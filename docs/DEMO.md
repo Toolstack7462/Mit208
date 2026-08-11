@@ -10,7 +10,7 @@ Nothing here needs the internet once the dependencies are installed.
 ## 0. The five minutes before the session
 
 ```bash
-git switch --detach v1.3-final     # the assessed version
+git switch --detach v1.4-final     # the assessed version
 git status                         # must print "nothing to commit, working tree clean"
 ```
 
@@ -26,7 +26,7 @@ Have open in separate browser tabs:
 | 3 | http://127.0.0.1:8000/system/database-status | proof of which engine is live |
 | 4 | https://github.com/Toolstack7462/Mit208 | the repository |
 | 5 | https://github.com/Toolstack7462/Mit208/actions | the passing CI run |
-| 6 | https://github.com/Toolstack7462/Mit208/releases/tag/v1.3-final | the assessed version |
+| 6 | https://github.com/Toolstack7462/Mit208/releases/tag/v1.4-final | the assessed version |
 
 ---
 
@@ -177,7 +177,7 @@ npm run preview -- --port 5173
 
 1. `evidence/video/PhishGuard_Walkthrough.mp4` — four minutes of the real
    application doing the whole workflow.
-2. `evidence/screenshots/` — 22 labelled captures with a generated index.
+2. `evidence/screenshots/` — 24 labelled captures with a generated index.
 3. The report's Appendix F — the same screens at full page size.
 
 Keep a copy of all three on the same USB stick as the repository. A demonstration

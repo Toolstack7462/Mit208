@@ -167,7 +167,7 @@ your route through the application.
 > wired in. There's no live mail ingestion and no HTTPS in this local demo.
 >
 > The code, the setup instructions and this evidence are all in the repository,
-> tagged v1.3-final. Thanks for watching."
+> tagged v1.4-final. Thanks for watching."
 
 ---
 

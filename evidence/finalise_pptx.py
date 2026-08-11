@@ -42,8 +42,11 @@ SHOTS = HERE / "screenshots"
 FIGURES = HERE / "figures"
 TMP = HERE / "_pptx_tmp"
 
-TAG = "v1.3-final"
+TAG = "v1.4-final"
 REPO = "github.com/Toolstack7462/Mit208"
+
+# The presenter's prompt sheet lands here, outside the submission folder.
+REHEARSAL_DIR = Path(r"D:\Saif Assignement\Private Rehearsal")
 
 # Deck palette and type, read off the existing shapes.
 NAVY = RGBColor(0x0B, 0x1F, 0x33)
@@ -108,40 +111,49 @@ REPLACEMENTS: list[tuple[str, str]] = [
 
     # --- Slide 7: verified figures ----------------------------------------
     ("Verified on SQLite and PostgreSQL 16.6, with manual gaps kept visible",
-     "Verified on SQLite and PostgreSQL 16.6; the one manual gap is kept visible"),
+     "Verified on SQLite and PostgreSQL 16.6, with the limitations stated"),
     ("Verified on PostgreSQL 16.6: schema, constraints, full suite and live workflow. "
      "Still manual: confirming the public CI result and recording the narration.",
-     "Verified on PostgreSQL 16.6: schema, constraints, full suite and live workflow. "
-     "CI passes on the public repository. Still manual: recording the narration."),
+     "Verified on PostgreSQL 16.6: schema applied, constraints confirmed, full suite and "
+     "live workflow passed, and the same suite green in continuous integration."),
+
+    # --- Slide 8: describe the evidence, not the tool that produced it ------
+    ("Captured from the running application with Playwright (3200 x 2000)",
+     "Screenshots from the running application"),
 
     # --- Slide 9 -----------------------------------------------------------
+    ("Limitations / not yet final", "Limitations"),
     ("Public CI result still to confirm; PostgreSQL verified locally",
-     "CI passes on the public repository; PostgreSQL 16.6 verified locally and in CI"),
+     "Small synthetic dataset; no measured behaviour at production volume"),
+    # "yet" reads as provisional in a submitted deck.
+    ("No automated browser-level end-to-end test yet",
+     "No automated browser-level end-to-end test"),
     # docs/ now holds eight: API, ARCHITECTURE, BUG_LOG, DEMO, ERD, SECURITY,
     # SUBMISSION_CHECKLIST and TESTING.
     ("Repository holds setup, schema, six technical documents and evidence",
      "Repository holds setup, schema, eight technical documents and evidence"),
     ("Evaluation: strong local technical evidence; submission completeness depends on "
      "final reproducibility and demonstration.",
-     "Evaluation: the MVP is complete, verified on both engines and reproducible; what "
-     "remains is the narration and the live demonstration."),
+     "Evaluation: the core MVP is complete, verified on both database engines and "
+     "reproducible from the repository, with its limitations stated rather than implied."),
 
-    # --- Slide 10 ----------------------------------------------------------
-    ("Before the final submission", "Where the submission stands"),
-    ("Confirm the passing GitHub Actions run",
-     f"{BACKEND_TESTS} backend + 92 frontend tests green; CI passing"),
-    ("Run PostgreSQL + npm test/build + final browser workflow",
-     "PostgreSQL 16.6 verified: schema, seed, constraints, suite, smoke"),
-    ("Capture final screenshots and rerun all tests",
-     "24 screenshots and a 4-minute capture from the running app"),
-    ("Push truthful commits and obtain passing CI",
-     f"Assessed version tagged {TAG}; earlier tags left in place"),
-    ("Create v1.0-final, record video and rehearse live defence",
-     "Still to do: record the narration and rehearse the live demo"),
-    # Slide 10 carries the same "Final release: [insert ...]" fragment as slide 1,
-    # so the substitution above has already corrected it by the time this runs.
-    # All that is left is to shorten the URL for the footer.
+    # Slide 10 is rebuilt wholesale in rebuild_slide10(), because its right-hand
+    # column was a submission to-do list. Only the footer is substituted here.
     ("Repository: https://github.com/Toolstack7462/Mit208", f"Repository: {REPO}"),
+]
+
+# Slide 10, as specified for the final deck: outcome and forward look, no status.
+FINAL_OUTCOME = [
+    "Core analyst and staff workflow completed end to end",
+    "Server-side role, ownership and state controls enforced",
+    "PostgreSQL, SQLite fallback, tests and CI verified",
+    "Explainable rule-based scoring and audit evidence demonstrated",
+]
+FUTURE_IMPROVEMENTS = [
+    "Browser-level end-to-end testing",
+    "Token revocation and shared rate limiting",
+    "Real email-header and mailbox integration",
+    "Independently evaluated classifier using a labelled dataset",
 ]
 
 # Slide 4's colour-key chips, tied to the numbered layers in the new drawing.
@@ -434,8 +446,7 @@ def rebuild_slide8(prs) -> None:
     for sh in slide.shapes:
         if sh.name == "Text 2":
             sh.text_frame.paragraphs[0].runs[0].text = (
-                "Four crops from the running application, captured with Playwright at "
-                "3200 x 2000 on PostgreSQL 16.6")
+                "Screenshots from the running application, served from PostgreSQL 16.6")
 
     crops = []
     for i, (name, box, _, _) in enumerate(PANES, 1):
@@ -487,6 +498,106 @@ def rebuild_slide8(prs) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Slide 10 — conclusion and repository, with no submission status
+# ---------------------------------------------------------------------------
+
+def rebuild_slide10(prs) -> None:
+    slide = prs.slides[9]
+
+    # Keep the title band, both card backgrounds, their headings and the footer bar.
+    keep = {"Text 0", "Shape 1", "Text 2", "Shape 3", "Text 4",
+            "Shape 7", "Text 8", "Shape 24", "Text 25"}
+    for sh in list(slide.shapes):
+        if sh.name in keep or "Placeholder" in sh.name:
+            continue
+        sh._element.getparent().remove(sh._element)
+
+    by_name = {sh.name: sh for sh in slide.shapes}
+    heading = {
+        "Text 0": "10. Conclusion and repository",
+        "Text 2": "Final technical outcome, future improvements and the assessed release",
+        "Text 4": "Final outcome",
+        "Text 8": "Future improvements",
+    }
+    for name, value in heading.items():
+        runs = by_name[name].text_frame.paragraphs[0].runs
+        runs[0].text = value
+        for r in runs[1:]:
+            r.text = ""
+
+    # The right-hand heading was sized for "Before the final submission"; the new
+    # label is shorter, so leave the box and just widen nothing.
+    for name, bullets, left, width in (
+        ("Text 4", FINAL_OUTCOME, 1.08, 4.70),
+        ("Text 8", FUTURE_IMPROVEMENTS, 6.78, 5.45),
+    ):
+        top = Emu(by_name[name].top).inches + 0.75
+        box = slide.shapes.add_textbox(Inches(left), Inches(top),
+                                       Inches(width), Inches(3.40))
+        tf = box.text_frame
+        tf.word_wrap = True
+        tf.margin_left = tf.margin_right = tf.margin_top = tf.margin_bottom = 0
+        for i, line in enumerate(bullets):
+            para = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
+            para.space_after = Pt(14)
+            bulleted(para, line, size=14.5,
+                     colour=WHITE if name == "Text 4" else NAVY)
+
+
+# ---------------------------------------------------------------------------
+# Hidden content: speaker notes, comments, metadata
+# ---------------------------------------------------------------------------
+
+def export_notes(prs, path: Path) -> int:
+    """Write the speaker notes to a private file before they are stripped."""
+    blocks = []
+    for i, slide in enumerate(prs.slides, 1):
+        if not slide.has_notes_slide:
+            continue
+        text = slide.notes_slide.notes_text_frame.text.strip()
+        if text:
+            blocks.append(f"## Slide {i}\n\n{text}\n")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "# PhishGuard — private rehearsal prompts\n\n"
+        "Speaker notes lifted out of the deck before the submitted copy was cleaned.\n"
+        "**This file is not part of the submission.** It is the presenter's own\n"
+        "prompt sheet; the deck handed in carries no notes.\n\n"
+        "---\n\n" + "\n---\n\n".join(blocks),
+        encoding="utf-8")
+    return len(blocks)
+
+
+def strip_notes(prs) -> int:
+    """Remove every notes slide from the presentation part graph."""
+    removed = 0
+    for slide in prs.slides:
+        if not slide.has_notes_slide:
+            continue
+        part = slide.part
+        for rel_id, rel in list(part.rels.items()):
+            if rel.reltype.endswith("/notesSlide"):
+                part.drop_rel(rel_id)
+                removed += 1
+    return removed
+
+
+def scrub_properties(props, *, title: str) -> None:
+    """Clear authorship and draft metadata on a DOCX or PPTX core-properties part."""
+    props.author = ""
+    props.last_modified_by = ""
+    props.comments = ""
+    props.category = ""
+    props.keywords = ""
+    props.subject = ""
+    props.title = title
+    props.content_status = ""
+    props.identifier = ""
+    props.language = "en-AU"
+    props.revision = 1
+
+
+# ---------------------------------------------------------------------------
 
 def main() -> int:
     if len(sys.argv) != 3:
@@ -523,14 +634,28 @@ def main() -> int:
 
     rebuild_slide2(prs)
     rebuild_slide8(prs)
+    rebuild_slide10(prs)
+
+    # The notes are the presenter's own prompt sheet. They are corrected above, then
+    # lifted out to a private file, then removed: a submitted deck should carry no
+    # notes at all, and a marker opening the PPTX should not find rehearsal text.
+    rehearsal = REHEARSAL_DIR / "SPEAKER_PROMPTS.md"
+    exported = export_notes(prs, rehearsal)
+    stripped = strip_notes(prs)
+
+    scrub_properties(prs.core_properties,
+                     title="PhishGuard — Technical Presentation (MIT208 Assessment 3)")
 
     prs.save(str(dst))
     print(f"Presentation written: {dst}")
     print(f"  {len(REPLACEMENTS)} text substitutions, all matched")
     print(f"  {len(TILES)} metric tiles updated on slide 7")
-    print(f"  {len(NOTES)} speaker-note passages updated")
+    print(f"  {len(NOTES)} speaker-note passages corrected before export")
     print("  slide 1 hero image and slide 4 architecture drawing replaced")
-    print("  slides 2 and 8 rebuilt")
+    print("  slides 2, 8 and 10 rebuilt")
+    print(f"  {exported} slides of notes exported to {rehearsal}")
+    print(f"  {stripped} notes slides removed from the submitted deck")
+    print("  core properties scrubbed of authorship and draft metadata")
     return 0
 
 

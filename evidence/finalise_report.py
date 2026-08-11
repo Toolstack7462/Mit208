@@ -47,7 +47,7 @@ SHOTS = HERE / "screenshots"
 REPO_URL = "https://github.com/Toolstack7462/Mit208"
 # The assessed version. The earlier *-final tags are intermediate markers, left
 # exactly where they point rather than moved, so the history stays honest.
-TAG = "v1.3-final"
+TAG = "v1.4-final"
 TAG_URL = f"{REPO_URL}/releases/tag/{TAG}"
 BLANK = "_" * 34            # a ruled fill-in field, not a placeholder to delete
 
@@ -425,7 +425,7 @@ BODY = {
         "test corrupts a row to prove it. Appendix D records each problem with its fix "
         "and the "
         "test that would catch its return. Remaining limitations are synthetic data, "
-        "simulated authentication headers, a heuristic AI-generated label, an "
+        "simulated authentication headers, a phrase-matching templated-language flag, an "
         "unimplemented DistilBERT placeholder, browser-stored tokens and no "
         "browser-level test."
     ),
@@ -444,13 +444,16 @@ BODY = {
         "scenarios tied to genuine defects."
     ),
     "Passing local tests": (
-        "Passing local tests is not the same as being submission-complete. The "
-        "continuous-integration run passes on the public repository and the assessed "
-        "commit carries a tag, both evidenced in Appendix E; Appendix A maps every claim "
-        "here to the file that supports it, and Appendix G declares my use of generative "
-        "AI. What remains is mine: recording the narration over the silent capture and "
-        "rehearsing the code explanation. Future work should add a browser-level test "
-        "and stronger session controls."
+        "Passing tests locally is not the same as being reproducible, so the evidence is "
+        "kept independent of this machine: the continuous-integration run passes on the "
+        "public repository and the assessed commit carries a tag, both shown in "
+        "Appendix E, while Appendix A maps every claim here to the file that supports it "
+        "and Appendix G declares my use of generative AI. The clearest limits on what has "
+        "been demonstrated are the synthetic dataset and the absence of a browser-level "
+        "test: the workflow is proven at the API boundary rather than through a driven "
+        "browser. Future work should close that gap first, then strengthen session "
+        "controls, before any move towards real header ingestion or an independently "
+        "evaluated classifier."
     ),
 
     # --- Conclusion ----------------------------------------------------------
@@ -461,8 +464,9 @@ BODY = {
         "security without replacing the architecture or overstating the rule engine as "
         "machine learning. It is supported by 262 automated tests, 22 live API checks on "
         "each database engine, 24 labelled screenshots and a recording of the running "
-        "application, all reproducible from the repository. The honest remaining gap is "
-        "the recorded narration. Realistic next steps are a browser-level test suite and "
+        "application, all reproducible from the repository. Its boundaries are stated "
+        "rather than obscured: synthetic data, simulated authentication headers and no "
+        "trained classifier. Realistic next steps are a browser-level test suite and "
         "stronger session controls."
     ),
 }
@@ -780,13 +784,10 @@ def load_ci() -> tuple[dict, list[list[str]]]:
     )
     rec["note"] = (
         f"The assessed version is the annotated tag {rec['tag']}, which points at commit "
-        f"{rec['sha'][:7]} — the commit the run above tested, and the address in Figure E2. "
-        f"The earlier v1.0, v1.1 and v1.2 final tags mark intermediate states; none was "
-        f"moved, because rewriting a pushed tag would make the history misleading about what "
-        f"was tested when. Any commit after the tag carries no application code: only "
-        f"evidence captured from the tag — the two images on the next two pages and the JSON "
-        f"record behind this table — which cannot be committed before the tag it documents "
-        f"exists."
+        f"{rec['sha'][:7]} — the commit the run above tested — and resolves at the address "
+        f"in Figure E2. Earlier tags mark intermediate states and were left where they "
+        f"point rather than moved, so the repository history remains an accurate record of "
+        f"what was tested at each stage."
     )
     return rec, rows
 

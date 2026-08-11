@@ -24,10 +24,10 @@ Legend: **[x]** done and verifiable · **[ ]** still requires the author
       configuration, how to run, test accounts, testing, limitations, AI-use note
 - [x] **Meaningful commit history** — work committed in separate, purposeful
       commits rather than one bulk upload
-- [x] **Assessed version tagged `v1.3-final`** — annotated tag pushed, carrying the
+- [x] **Assessed version tagged `v1.4-final`** — annotated tag pushed, carrying the
       verified figures in its message. The earlier `*-final` tags were left where
       they point rather than moved, so every version stays identifiable. The tag
-      resolves publicly at `/releases/tag/v1.3-final`
+      resolves publicly at `/releases/tag/v1.4-final`
 - [x] **Passing GitHub Actions run** — the run for the tagged commit is green on all
       six jobs. The run number, commit and per-job result are recorded in
       `evidence/ci_evidence.json` and captured in
@@ -53,7 +53,7 @@ Legend: **[x]** done and verifiable · **[ ]** still requires the author
       unique index confirmed in `pg_constraint`/`pg_indexes`, seed verified,
       the full 170-test suite passed, the 22-check live workflow passed, and
       `/system/database-status` captured showing `"engine": "postgresql"`
-      (`evidence/screenshots/18-postgresql-database-status.png`)
+      (`evidence/screenshots/20-postgresql-database-status.png`)
 
 ## 3. Testing evidence
 
@@ -107,9 +107,10 @@ Legend: **[x]** done and verifiable · **[ ]** still requires the author
 - [x] Testing and security slide carries the verified figures
 - [x] Real product screenshots from the running application
 - [x] Results and limitations stated plainly
-- [x] Speaker notes on all ten slides
-- [ ] **Insert your name and student ID** on slide 1
-- [ ] **Insert the release link** on slides 1 and 10
+- [x] No speaker notes, comments or draft metadata in the submitted deck; the
+      presenter prompts live outside the submission package
+- [x] The assessed release is cited on slides 1 and 10
+- [ ] **Write your name and student ID** on the ruled fields on slide 1
 
 ## 6. Walkthrough video (3–4 minutes)
 

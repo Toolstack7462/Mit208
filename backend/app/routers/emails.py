@@ -12,6 +12,7 @@ from ..deps import get_current_user, require_roles
 from ..models import AnalystReview, EmailRecord, User
 from ..schemas import EmailBase, EmailCreate, EmailDetailOut, ReviewAction
 from ..scoring import score_email
+from ..transitions import is_allowed, rejection_detail
 
 router = APIRouter(prefix="/api/emails", tags=["emails"])
 
@@ -142,6 +143,16 @@ def _apply_action(
         raise HTTPException(
             status_code=409,
             detail=f"Email is already '{new_status}'; no action taken.",
+        )
+
+    # Then the source-state rule. The no-op check above only caught the one case
+    # where the target equalled the current status; every other invalid move
+    # (releasing email that was never held, re-quarantining a confirmed phishing
+    # verdict) was accepted and recorded as a real security decision.
+    if not is_allowed(action, email.status):
+        raise HTTPException(
+            status_code=409,
+            detail=rejection_detail(action, email.status),
         )
 
     review = AnalystReview(

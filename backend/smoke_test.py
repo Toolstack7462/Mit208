@@ -19,7 +19,7 @@ import urllib.request
 # Override with PHISHGUARD_BASE_URL if the server runs on a different port.
 BASE = os.environ.get("PHISHGUARD_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 
-TOTAL_CHECKS = 20
+TOTAL_CHECKS = 22
 
 
 def call(method, path, token=None, body=None):
@@ -188,6 +188,30 @@ def main():
     assert "release_request_approved" in actions, actions
     print(f"[20] approval released email #{held['id']} and was audited; "
           f"{len(logs)} log entries: {actions}"); ok += 1
+
+    # --- State-machine and authorisation rules (BUG-17, BUG-18) -------------
+    s, delivered = call("POST", "/api/emails", analyst, {
+        "sender": "newsletter@techweekly.com",
+        "sender_name": "Tech Weekly",
+        "recipient": "staff@phishguard.local",
+        "subject": "Your Monday tech digest is here",
+        "body": "Hi Riley, here are this week's top engineering reads at "
+                "https://techweekly.com/digest . Happy reading!",
+    })
+    assert s == 201 and delivered["status"] == "inbox", delivered
+
+    s, d = call("POST", f"/api/emails/{delivered['id']}/release", analyst, {})
+    assert s == 409, (s, d)
+    s, unchanged = call("GET", f"/api/emails/{delivered['id']}", analyst)
+    assert unchanged["status"] == "inbox", unchanged
+    print(f"[21] releasing email #{delivered['id']} that was never held rejected "
+          f"(409) and it stayed 'inbox': {message_of(d)!r}"); ok += 1
+
+    s, d = call("POST", "/api/release-requests", analyst,
+                {"email_id": delivered["id"], "reason": "Analyst raising this on behalf of staff."})
+    assert s == 403, (s, d)
+    print(f"[22] analyst blocked from raising a staff release request (403): "
+          f"{message_of(d)!r}"); ok += 1
 
     print(f"\nALL {ok}/{TOTAL_CHECKS} CHECKS PASSED")
     return 0 if ok == TOTAL_CHECKS else 1

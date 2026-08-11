@@ -10,14 +10,15 @@ from ..database import get_db
 from ..deps import get_current_user, require_roles
 from ..models import AnalystReview, EmailRecord, StaffReleaseRequest, User
 from ..schemas import ReleaseRequestCreate, ReleaseRequestDecision, ReleaseRequestOut
+from ..transitions import HOLDABLE_STATUSES, is_allowed, rejection_detail
 
 router = APIRouter(prefix="/api/release-requests", tags=["release-requests"])
 
 REVIEWER = require_roles("analyst", "admin")
 
-# Statuses that mean "the recipient cannot read this email yet", i.e. the only
-# states from which a release request is meaningful.
-HOLDABLE_STATUSES = ("quarantined", "confirmed_phishing")
+# Raising a request is a recipient's action, so only staff may do it — see
+# create_request. Analysts and admins keep read access to the whole queue.
+REQUESTER = require_roles("staff")
 
 DUPLICATE_REQUEST_MESSAGE = "You already have a pending release request for this email."
 
@@ -84,12 +85,23 @@ def create_request(
     payload: ReleaseRequestCreate,
     request: Request,
     db: Session = Depends(get_db),
-    current: User = Depends(require_roles("staff", "analyst", "admin")),
+    current: User = Depends(REQUESTER),
 ):
+    """Raise a release request. Staff only, and only for the caller's own email.
+
+    The endpoint previously accepted analyst and admin callers as well, and the
+    ownership check was written as ``if current.role == "staff"``, so those two
+    roles could raise a request for anyone's mailbox. That was both unnecessary
+    — an analyst can already release an email directly — and wrong, because the
+    resulting queue entry claimed a recipient had asked for a release they had
+    never asked for. See docs/BUG_LOG.md, BUG-18.
+    """
     email = db.get(EmailRecord, payload.email_id)
     if not email:
         raise HTTPException(status_code=404, detail="Email not found")
-    if current.role == "staff" and email.recipient != current.email:
+    # No role condition: this endpoint is staff-only, and a staff member may act
+    # only on mail addressed to them.
+    if email.recipient != current.email:
         raise HTTPException(status_code=403, detail="You can only request release of your own email")
 
     # Only a held email can be released. Requesting release of something already
@@ -153,6 +165,16 @@ def decide_request(
         raise HTTPException(status_code=404, detail="Release request not found")
     if req.status != "pending":
         raise HTTPException(status_code=409, detail="Request already decided")
+
+    # Approving moves the email, so it must obey the same source-state rule as a
+    # direct analyst release. A request can sit in the queue while the email is
+    # acted on elsewhere; approving a stale one used to force the email straight
+    # to "released" from whatever state it had reached.
+    if payload.status == "approved" and req.email and not is_allowed("release", req.email.status):
+        raise HTTPException(
+            status_code=409,
+            detail=rejection_detail("release", req.email.status),
+        )
 
     req.status = payload.status
     req.reviewed_by = current.id

@@ -117,7 +117,7 @@ def create_email(
         auth_spf=result.spf,
         auth_dkim=result.dkim,
         auth_dmarc=result.dmarc,
-        ai_generated=result.ai_generated,
+        templated_language=result.templated_language,
     )
     db.add(email)
     db.flush()

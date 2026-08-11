@@ -104,7 +104,7 @@ results are quarantined automatically:
     "Urgency / pressure language: verify now, within 24 hours.",
     "Requests credentials / sensitive data: confirm your password.",
     "Link points directly to a raw IP address.",
-    "Copy uses templated phrasing typical of AI-generated / mass phishing."
+    "Copy uses templated phrasing typical of mass phishing."
   ]
 }
 ```

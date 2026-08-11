@@ -127,7 +127,7 @@ def seed():
                 risk_score=result.score, risk_level=result.level,
                 score_reasons=json.dumps(result.reasons),
                 auth_spf=result.spf, auth_dkim=result.dkim, auth_dmarc=result.dmarc,
-                ai_generated=result.ai_generated,
+                templated_language=result.templated_language,
                 received_at=noon_today - timedelta(days=DAYS_AGO[i]),
             )
             db.add(email)

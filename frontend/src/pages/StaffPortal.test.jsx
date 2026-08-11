@@ -14,12 +14,12 @@ const HELD_EMAIL = {
   id: 1, message_id: "<a@b>", sender: "security@paypa1-support.com",
   sender_name: "PayPal Security", recipient: "staff@phishguard.local",
   subject: "Urgent: account suspended", status: "quarantined",
-  risk_score: 88, risk_level: "critical", ai_generated: true,
+  risk_score: 88, risk_level: "critical", templated_language: true,
   received_at: "2026-08-05T09:00:00Z",
 };
 const DELIVERED_EMAIL = {
   ...HELD_EMAIL, id: 2, subject: "Monday tech digest", status: "inbox",
-  risk_score: 4, risk_level: "low", ai_generated: false,
+  risk_score: 4, risk_level: "low", templated_language: false,
 };
 
 /** Wire api.get for the two list calls plus the detail call. */

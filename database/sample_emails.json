@@ -8,7 +8,7 @@
     "body": "Dear customer,\n\nWe detected unusual activity. Your account suspended until you verify your identity. Please confirm your password immediately or your account will expire within 24 hours.\n\n<a href=\"http://198.51.100.23/paypal/login\">https://www.paypal.com/login</a>\n\nFailure to act now will result in permanent closure.\nPayPal Security Team",
     "risk_score": 100,
     "risk_level": "critical",
-    "ai_generated": true,
+    "templated_language": true,
     "auth": {
       "spf": "fail",
       "dkim": "fail",
@@ -32,7 +32,7 @@
     "body": "You have won a $500 Amazon gift card! Claim your free prize now before it expires. Click here: http://bit.ly/claim-prize-now and provide your credit card to cover shipping.",
     "risk_score": 73,
     "risk_level": "high",
-    "ai_generated": false,
+    "templated_language": false,
     "auth": {
       "spf": "fail",
       "dkim": "fail",
@@ -55,7 +55,7 @@
     "body": "Our records show your mailbox is full. To avoid losing emails you must update your password immediately. Log in to http://company-secure-verify.com/reset and confirm your identity. This is a final notice.",
     "risk_score": 58,
     "risk_level": "high",
-    "ai_generated": false,
+    "templated_language": false,
     "auth": {
       "spf": "fail",
       "dkim": "fail",
@@ -76,7 +76,7 @@
     "body": "We detected a sign-in from a new device. If this wasn't you, verify your account immediately by opening the attached invoice.html file and signing in to restore access.",
     "risk_score": 55,
     "risk_level": "high",
-    "ai_generated": true,
+    "templated_language": true,
     "auth": {
       "spf": "fail",
       "dkim": "fail",
@@ -99,7 +99,7 @@
     "body": "Your membership is on hold because your payment is overdue. Update your billing details now to avoid cancellation. Visit tinyurl.com/netflix-billing and enter your card number to continue watching.",
     "risk_score": 46,
     "risk_level": "medium",
-    "ai_generated": false,
+    "templated_language": false,
     "auth": {
       "spf": "fail",
       "dkim": "fail",
@@ -120,7 +120,7 @@
     "body": "Hi Riley,\n\nHere are this week's top engineering reads, including a deep dive on Postgres indexing and a guide to FastAPI dependency injection. Read online at https://techweekly.com/digest .\n\nHappy reading!",
     "risk_score": 0,
     "risk_level": "low",
-    "ai_generated": false,
+    "templated_language": false,
     "auth": {
       "spf": "pass",
       "dkim": "pass",
@@ -139,7 +139,7 @@
     "body": "Hi Jane,\n\nThis is a friendly reminder to submit your timesheet in the HR portal by end of day Friday. Let me know if you have any questions.\n\nThanks,\nHR Team",
     "risk_score": 0,
     "risk_level": "low",
-    "ai_generated": false,
+    "templated_language": false,
     "auth": {
       "spf": "pass",
       "dkim": "pass",
@@ -158,7 +158,7 @@
     "body": "You're invited to Sprint Planning on Thursday at 10:00am in Room 4. Agenda and notes are in the shared drive. See you there!",
     "risk_score": 0,
     "risk_level": "low",
-    "ai_generated": false,
+    "templated_language": false,
     "auth": {
       "spf": "pass",
       "dkim": "pass",

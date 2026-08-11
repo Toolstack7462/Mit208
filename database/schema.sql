@@ -44,7 +44,7 @@ CREATE TABLE email_records (
     auth_spf      VARCHAR(8)   NOT NULL DEFAULT 'pass',      -- pass | fail | none (simulated)
     auth_dkim     VARCHAR(8)   NOT NULL DEFAULT 'pass',
     auth_dmarc    VARCHAR(8)   NOT NULL DEFAULT 'pass',
-    ai_generated  BOOLEAN      NOT NULL DEFAULT FALSE,
+    templated_language  BOOLEAN      NOT NULL DEFAULT FALSE,
     received_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     CONSTRAINT ck_email_status CHECK (

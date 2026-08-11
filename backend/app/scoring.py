@@ -37,7 +37,10 @@ RISKY_EXTENSIONS = [".exe", ".scr", ".js", ".vbs", ".jar", ".iso", ".docm", ".xl
 # the actual sender / link domain does not match.
 KNOWN_BRANDS = ["paypal", "microsoft", "apple", "amazon", "netflix", "google", "bank", "dhl", "fedex", "ups"]
 # Templated phrasing commonly seen in AI-generated / mass phishing copy.
-AI_MARKERS = [
+# Stock phrases that mass-mailed phishing reuses. Matching one of these tells us
+# the copy is templated; it says nothing about who or what wrote it, which is why
+# this signal is called "templated language" rather than "AI-generated".
+TEMPLATED_PHRASES = [
     "dear customer", "dear user", "dear valued", "we detected", "we have detected",
     "kindly", "we regret to inform", "please be advised", "rest assured",
     "we apologize for any inconvenience", "as a valued", "for your security",
@@ -54,8 +57,8 @@ class ScoreResult:
     spf: str = "pass"
     dkim: str = "pass"
     dmarc: str = "pass"
-    # Heuristic flag: does the copy look machine/AI generated?
-    ai_generated: bool = False
+    # Heuristic flag: does the copy reuse mass-phishing boilerplate?
+    templated_language: bool = False
 
 
 def _domain_of(address: str) -> str:
@@ -151,11 +154,14 @@ def score_email(
         score += 16
         reasons.append(f"References risky attachment type(s): {', '.join(risky)}.")
 
-    # --- AI-generated copy heuristic ---------------------------------------
-    ai_hits = [m for m in AI_MARKERS if m in haystack]
-    ai_generated = len(ai_hits) >= 1
-    if ai_generated:
-        reasons.append("Copy uses templated phrasing typical of AI-generated / mass phishing.")
+    # --- Templated-language heuristic ---------------------------------------
+    # A substring match against the stock-phrase list above. It is deliberately not
+    # presented as machine-authorship detection: matching "kindly" says the copy is
+    # boilerplate, not that a model produced it.
+    templated_hits = [m for m in TEMPLATED_PHRASES if m in haystack]
+    templated_language = len(templated_hits) >= 1
+    if templated_language:
+        reasons.append("Copy uses templated phrasing typical of mass phishing.")
 
     if not reasons:
         reasons.append("No phishing indicators detected by rule engine.")
@@ -178,5 +184,5 @@ def score_email(
 
     return ScoreResult(
         score=score, level=_level_for(score), reasons=reasons,
-        spf=spf, dkim=dkim, dmarc=dmarc, ai_generated=ai_generated,
+        spf=spf, dkim=dkim, dmarc=dmarc, templated_language=templated_language,
     )

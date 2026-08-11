@@ -85,7 +85,7 @@ class EmailRecord(Base):
     auth_spf: Mapped[str] = mapped_column(String(8), nullable=False, default="pass")
     auth_dkim: Mapped[str] = mapped_column(String(8), nullable=False, default="pass")
     auth_dmarc: Mapped[str] = mapped_column(String(8), nullable=False, default="pass")
-    ai_generated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    templated_language: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 

@@ -97,7 +97,7 @@ def _seed(db):
             subject=subject, body=body,
             status="quarantined" if r.level in ("high", "critical") else "inbox",
             risk_score=r.score, risk_level=r.level, score_reasons=json.dumps(r.reasons),
-            auth_spf=r.spf, auth_dkim=r.dkim, auth_dmarc=r.dmarc, ai_generated=r.ai_generated,
+            auth_spf=r.spf, auth_dkim=r.dkim, auth_dmarc=r.dmarc, templated_language=r.templated_language,
         ))
     db.commit()
 

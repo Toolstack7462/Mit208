@@ -24,7 +24,7 @@ const EMAIL = {
   auth_spf: "fail",
   auth_dkim: "fail",
   auth_dmarc: "fail",
-  ai_generated: true,
+  templated_language: true,
   received_at: "2026-08-05T09:00:00Z",
 };
 

@@ -168,8 +168,8 @@ export default function Inbox() {
                   <div className="mt-2 flex items-center gap-2">
                     <RiskBadge level={e.risk_level} score={e.risk_score} showScore />
                     <span className={`badge ${status.cls}`}>{status.label}</span>
-                    {e.ai_generated && (
-                      <span className="badge bg-violet-50 text-violet-700 ring-1 ring-violet-200">AI-Gen</span>
+                    {e.templated_language && (
+                      <span className="badge bg-violet-50 text-violet-700 ring-1 ring-violet-200">Templated</span>
                     )}
                   </div>
                 </button>

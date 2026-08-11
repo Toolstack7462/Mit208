@@ -77,9 +77,11 @@ export default function EmailDetailPanel({ email, mode = "analyst", busy, onActi
             {meta.label} · {email.risk_score}
           </span>
           <span className={`badge ${status.cls}`}>{status.label}</span>
-          {email.ai_generated && (
+          {/* The rule engine matches a list of stock phrases, so this badge claims
+              only that the copy is boilerplate — not that a machine wrote it. */}
+          {email.templated_language && (
             <span className="badge bg-violet-50 text-violet-700 ring-1 ring-violet-200">
-              <Sparkles className="h-3 w-3" /> AI-Generated
+              <Sparkles className="h-3 w-3" /> Templated Language
             </span>
           )}
         </div>

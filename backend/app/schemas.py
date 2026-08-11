@@ -86,7 +86,7 @@ class EmailBase(BaseModel):
     status: str
     risk_score: int
     risk_level: str
-    ai_generated: bool = False
+    templated_language: bool = False
     received_at: datetime
 
 

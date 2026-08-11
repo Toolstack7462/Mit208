@@ -305,8 +305,14 @@ so the whole stack was run against a real PostgreSQL **16.6** server. This is th
 evidence behind every "behaves the same on both engines" claim in this project.
 
 **Cluster:** a throwaway PostgreSQL 16.6 instance on port 5433, created with
-`initdb` from the official binaries, used only for this verification and deleted
-afterwards.
+`initdb` from the official Windows binaries and used only for this verification.
+It holds nothing but the synthetic seed data, is not registered as a service, and
+can be deleted by stopping it and removing its directory:
+
+```bash
+pg_ctl -D <cluster-dir> -m fast stop
+rm -rf <cluster-dir>
+```
 
 ### What was verified
 

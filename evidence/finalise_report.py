@@ -784,9 +784,10 @@ def load_ci() -> tuple[dict, list[list[str]]]:
         f"and v1.1-final, mark intermediate states; neither was moved, because rewriting a "
         f"pushed tag would make the history misleading. No GitHub Release object is "
         f"published: the tag is the version marker and resolves publicly at the address in "
-        f"Figure E2. Exactly one commit follows the tag, and it contains only the two images "
-        f"on the next two pages and the JSON record behind this table — evidence captured "
-        f"from a tag cannot be committed before that tag exists."
+        f"Figure E2. The commits after the tag carry no application code: they hold the two "
+        f"images on the next two pages, the JSON record behind this table, and documentation "
+        f"corrections — evidence captured from a tag cannot be committed before that tag "
+        f"exists."
     )
     return rec, rows
 

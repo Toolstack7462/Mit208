@@ -35,9 +35,10 @@ SHOTS = HERE / "screenshots"
 OUT = HERE / "figures" / "core-workflow.png"
 
 # The landscape page area the figure is placed into, in inches: A4 landscape
-# (11.69 x 8.27) less the report's 0.55in margins. finalise_report.py inserts the
-# image at exactly this size, so what is computed here is what the reader sees.
-PAGE_W_IN, PAGE_H_IN = 10.59, 7.17
+# (11.69 x 8.27) less the report's 0.55in margins is 10.59 x 7.17, and the height
+# here leaves room for the caption beneath. finalise_report.py inserts the image at
+# exactly this size, so what is computed below is what the reader sees.
+PAGE_W_IN, PAGE_H_IN = 10.59, 6.60
 DPI = 288
 
 # Crop boxes are in image pixels on the 3200x2000 captures, i.e. 2x the CSS
@@ -70,9 +71,9 @@ PANES = [
      "review and audit rows in the same transaction."),
 ]
 
-TITLE = "PhishGuard core workflow"
-SUBTITLE = ("Four screens from the running application. Steps 1-2 are the analyst's view; "
-            "steps 3-4 are the staff request and its decision.")
+# No title or subtitle is drawn inside the figure. The report supplies the caption,
+# and every line of chrome the figure draws is a line the screenshots do not get —
+# which is the whole constraint here, since pane width is what sets legibility.
 
 NAVY = (15, 23, 42)
 BRAND = (37, 99, 235)
@@ -80,12 +81,14 @@ MUTED = (71, 85, 105)
 BORDER = (203, 213, 225)
 BG = (255, 255, 255)
 
-# Vertical budget, in inches.
-HEADER_H = 0.46
-STEP_H = 0.26
-CAP_H = 0.40
+# Vertical budget, in inches. Every tenth of an inch spent here is taken off the
+# pane widths, so these are as tight as the type allows: a caption is at most two
+# lines of 0.108in, and a step label one line of 0.135in.
+HEADER_H = 0.0
+STEP_H = 0.22
+CAP_H = 0.30
 GAP_X = 0.10
-GAP_Y = 0.16
+GAP_Y = 0.14
 
 FONT_DIRS = [Path("C:/Windows/Fonts"), Path("/usr/share/fonts/truetype/dejavu"),
              Path("/System/Library/Fonts")]
@@ -145,11 +148,6 @@ def main() -> int:
     f_sub = _font(["segoeui.ttf", "arial.ttf", "DejaVuSans.ttf"], round(0.115 * inch))
     f_step = _font(["segoeuib.ttf", "arialbd.ttf", "DejaVuSans-Bold.ttf"], round(0.135 * inch))
     f_cap = _font(["segoeui.ttf", "arial.ttf", "DejaVuSans.ttf"], round(0.108 * inch))
-
-    d.text((W // 2, round(0.14 * inch)), TITLE, font=f_title, fill=NAVY, anchor="mm")
-    for i, line in enumerate(wrap(d, SUBTITLE, f_sub, W - round(1.2 * inch))):
-        d.text((W // 2, round((0.29 + 0.14 * i) * inch)), line, font=f_sub,
-               fill=MUTED, anchor="mm")
 
     def place(crop: Image.Image, x_in: float, y_in: float, w_in: float, h_in: float,
               step: str, caption: str) -> None:

@@ -47,7 +47,7 @@ LAYER_TINTS = [
 # Each layer: (number, name, strapline, [(title, detail), ...]).
 # `detail` is dropped in the slide variant.
 LAYERS = [
-    ("1", "Browser", "React 18 + Vite + Tailwind", [
+    ("1", "Browser", "analyst · staff · admin — React 18 + Vite + Tailwind", [
         ("6 role-scoped pages", "Login, Dashboard, Inbox, Staff Portal,\nRelease Requests, Audit Logs"),
         ("AuthContext", "holds the session; revalidates it\nthrough /api/auth/me on load"),
         ("lib/transitions.js", "mirrors the server state machine so\nthe UI only offers valid actions"),
@@ -59,12 +59,13 @@ LAYERS = [
         ("deps.py", "JWT -> user re-read from the DB;\nrequire_roles(...) per route"),
         ("security.py / ratelimit.py", "bcrypt with a 72-byte guard, typed\nJWTs, per-IP failed-login limit"),
     ]),
+    # Implemented components only. The unbuilt classifier is disclosed in the
+    # report's limitations, not drawn here as though it were part of the system.
     ("3", "Application policy", "authoritative — all rules re-checked here", [
         ("5 routers", "auth, emails, requests,\naudit, dashboard"),
         ("transitions.py", "the email state machine: which action\nis valid from which status"),
-        ("scoring.py", "explainable rule engine — a score,\na level and named reasons"),
-        ("audit.py", "append-only writer: every material\naction is recorded"),
-        ("ml_model.py", "documented placeholder — NOT wired\ninto any running path"),
+        ("scoring.py", "rule engine: bounded score, level and\nthe named reasons behind it"),
+        ("audit.py", "append-only writer at application level:\nevery material action is recorded"),
     ]),
     ("4", "Persistence", "SQLAlchemy 2.0 -> PostgreSQL", [
         ("Unit-of-work session", "status, review and audit rows commit\nor roll back together"),

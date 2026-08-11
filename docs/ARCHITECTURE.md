@@ -46,7 +46,6 @@ component named here exists in the repository at the path given.
 │  ratelimit.py  per-IP failed-login limiter                                │
 │  audit.py      append-only audit helper                                   │
 │  config.py     env-driven settings + SECRET_KEY enforcement               │
-│  ml_model.py   documented integration point — NOT wired in (see below)    │
 └───────────────────────────────┬──────────────────────────────────────────┘
                                 │  SQLAlchemy 2.0 ORM
 ┌───────────────────────────────▼──────────────────────────────────────────┐
@@ -64,12 +63,12 @@ component named here exists in the repository at the path given.
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Note on the ML component.** `backend/app/ml_model.py` is a documented
-placeholder for a future DistilBERT classifier. It is **not** part of the MVP and
-is **not** called by any running code path. All risk scores in the working system
-come from the rule engine in `scoring.py`. This is stated here, in the README and
-in the report so the boundary between what is built and what is planned is
-unambiguous.
+**Limitation — no machine-learning component.** The diagram above shows only what
+is implemented. `backend/app/ml_model.py` exists as a documented integration point
+for a DistilBERT classifier that was not built: it raises `NotImplementedError` and
+no running code path calls it, so it is deliberately absent from the architecture.
+Every risk score in the working system comes from the rule engine in `scoring.py`.
+The same limitation is recorded in the README and in the report.
 
 ---
 
@@ -82,7 +81,7 @@ The primary user journey — the one demonstrated in the walkthrough — is:
     POST /api/emails (analyst/admin)
         └─> scoring.score_email(sender, subject, body, sender_name)
               returns score 0-100, level, list of human-readable reasons,
-              simulated SPF/DKIM/DMARC, AI-generated flag
+              simulated SPF/DKIM/DMARC, templated-language flag
         └─> level in {high, critical} ? status = "quarantined"
                                       : status = "inbox"
         └─> INSERT email_records

@@ -45,7 +45,9 @@ FIGURES = HERE / "figures"
 SHOTS = HERE / "screenshots"
 
 REPO_URL = "https://github.com/Toolstack7462/Mit208"
-TAG = "v1.1-final"
+# The assessed version. v1.0-final and v1.1-final are earlier markers, left exactly
+# where they were pointing rather than moved, so the history stays honest.
+TAG = "v1.2-final"
 TAG_URL = f"{REPO_URL}/releases/tag/{TAG}"
 BLANK = "_" * 34            # a ruled fill-in field, not a placeholder to delete
 
@@ -777,14 +779,14 @@ def load_ci() -> tuple[dict, list[list[str]]]:
         f"commit, completed with all {len(rec['jobs'])} jobs green."
     )
     rec["note"] = (
-        f"The assessed version is marked by the annotated tag {rec['tag']}, which points at "
-        f"commit {rec['sha'][:7]}. The earlier v1.0-final tag has been left exactly where it "
-        f"was rather than moved, so both the earlier and the corrected final version stay "
-        f"identifiable. A GitHub Release object has not been published; the tag is the "
-        f"version marker, and it resolves publicly at the address in Figure E2. One commit "
-        f"follows the tag, and it contains only the two images on the next two pages and the "
-        f"JSON record behind this table: evidence captured from the tag cannot be committed "
-        f"before the tag exists."
+        f"The assessed version is the annotated tag {rec['tag']}, which points at commit "
+        f"{rec['sha'][:7]} — the commit the run above tested. Two earlier tags, v1.0-final "
+        f"and v1.1-final, mark intermediate states; neither was moved, because rewriting a "
+        f"pushed tag would make the history misleading. No GitHub Release object is "
+        f"published: the tag is the version marker and resolves publicly at the address in "
+        f"Figure E2. Exactly one commit follows the tag, and it contains only the two images "
+        f"on the next two pages and the JSON record behind this table — evidence captured "
+        f"from a tag cannot be committed before that tag exists."
     )
     return rec, rows
 

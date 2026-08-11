@@ -54,7 +54,7 @@ def latest_run() -> dict:
 
 
 def main() -> int:
-    tag = sys.argv[1] if len(sys.argv) > 1 else "v1.1-final"
+    tag = sys.argv[1] if len(sys.argv) > 1 else "v1.2-final"
 
     run = latest_run()
     if run["status"] != "completed" or run["conclusion"] != "success":

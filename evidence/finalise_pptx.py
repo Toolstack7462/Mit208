@@ -42,7 +42,7 @@ SHOTS = HERE / "screenshots"
 FIGURES = HERE / "figures"
 TMP = HERE / "_pptx_tmp"
 
-TAG = "v1.1-final"
+TAG = "v1.2-final"
 REPO = "github.com/Toolstack7462/Mit208"
 
 # Deck palette and type, read off the existing shapes.
@@ -135,7 +135,7 @@ REPLACEMENTS: list[tuple[str, str]] = [
     ("Capture final screenshots and rerun all tests",
      "22 screenshots and a 4-minute capture from the running app"),
     ("Push truthful commits and obtain passing CI",
-     f"Assessed version tagged {TAG}; v1.0-final left in place"),
+     f"Assessed version tagged {TAG}; earlier tags left in place"),
     ("Create v1.0-final, record video and rehearse live defence",
      "Still to do: record the narration and rehearse the live demo"),
     # Slide 10 carries the same "Final release: [insert ...]" fragment as slide 1,

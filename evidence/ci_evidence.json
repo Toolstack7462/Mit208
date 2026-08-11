@@ -1,21 +1,13 @@
 {
-  "run_number": 8,
-  "run_id": 31523179082,
-  "run_url": "https://github.com/Toolstack7462/Mit208/actions/runs/31523179082",
-  "sha": "752c8adb32a028a984f7a7562c29686ea1592e28",
+  "run_number": 11,
+  "run_id": 31532703878,
+  "run_url": "https://github.com/Toolstack7462/Mit208/actions/runs/31532703878",
+  "sha": "efc09b44c64664c58c27899a83f0c126133a4d1d",
   "conclusion": "success",
-  "created_at": "2026-08-11T18:31:40Z",
+  "created_at": "2026-08-11T20:23:44Z",
   "jobs": [
     {
-      "name": "Secret scan",
-      "conclusion": "success"
-    },
-    {
       "name": "Frontend (vitest + build)",
-      "conclusion": "success"
-    },
-    {
-      "name": "Backend (pytest, Python 3.13)",
       "conclusion": "success"
     },
     {
@@ -29,10 +21,18 @@
     {
       "name": "Backend (pytest, Python 3.11)",
       "conclusion": "success"
+    },
+    {
+      "name": "Secret scan",
+      "conclusion": "success"
+    },
+    {
+      "name": "Backend (pytest, Python 3.13)",
+      "conclusion": "success"
     }
   ],
-  "tag": "v1.2-final",
-  "tag_url": "https://github.com/Toolstack7462/Mit208/releases/tag/v1.2-final",
+  "tag": "v1.3-final",
+  "tag_url": "https://github.com/Toolstack7462/Mit208/releases/tag/v1.3-final",
   "run_shot": "23-ci-run-passing.png",
   "tag_shot": "24-release-tag.png"
 }

@@ -36,9 +36,12 @@ PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("Stripe key", re.compile(r"\b[sr]k_(live|test)_[0-9A-Za-z]{16,}")),
     ("Private key block", re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY")),
     ("JSON Web Token", re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}")),
-    # A connection string carrying a real-looking password, e.g.
-    # postgresql://user:hunter2@host/db. The password is captured so obvious
-    # documentation placeholders can be filtered out below.
+    # A connection string carrying a real-looking password. The password is
+    # captured as `pw` so obvious documentation placeholders are filtered out
+    # below. Any example written in this file must itself use a placeholder --
+    # a scanner necessarily contains specimens of what it looks for, and the
+    # first version of this comment spelled out a literal password, which the
+    # CI run then correctly flagged.
     ("Database URL with password",
      re.compile(r"(?:postgres(?:ql)?|mysql|mongodb)(?:\+\w+)?://"
                 r"[^\s:/@]+:(?P<pw>[^\s:/@]{3,})@")),

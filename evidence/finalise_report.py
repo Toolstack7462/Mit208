@@ -523,7 +523,7 @@ TABLE1 = [
     ["Database integrity, raw SQL", "6 of 6 invalid writes rejected",
      "PostgreSQL 16.6: ten CHECK constraints and a partial unique index"],
     ["Secret scan", "0 unacknowledged findings",
-     "136 tracked files; also enforced as a CI job"],
+     "Every tracked file; also enforced as a CI job"],
 ]
 
 APPENDIX_A = [
@@ -602,7 +602,7 @@ APPENDIX_B = [
      "As expected (test_integrity.py)", "Pass"],
     ["B18", "API made unreachable while the dashboard is open",
      "An explicit, retryable error with a request id",
-     "As expected (Appendix F, screenshot 16)", "Pass"],
+     "As expected (Figure F8)", "Pass"],
 ]
 
 APPENDIX_C = [
@@ -781,7 +781,10 @@ def load_ci() -> tuple[dict, list[list[str]]]:
         f"commit {rec['sha'][:7]}. The earlier v1.0-final tag has been left exactly where it "
         f"was rather than moved, so both the earlier and the corrected final version stay "
         f"identifiable. A GitHub Release object has not been published; the tag is the "
-        f"version marker, and it resolves publicly at the address in Figure E2."
+        f"version marker, and it resolves publicly at the address in Figure E2. One commit "
+        f"follows the tag, and it contains only the two images on the next two pages and the "
+        f"JSON record behind this table: evidence captured from the tag cannot be committed "
+        f"before the tag exists."
     )
     return rec, rows
 

@@ -19,7 +19,7 @@ The suite runs on in-memory SQLite by default and on PostgreSQL when
 | Frontend unit + component | vitest 2.1.9 | 11 | **92** | **92 passed** |
 | Live end-to-end (running server) | `smoke_test.py` | 1 | **22 checks** | **22/22 passed** |
 | Production build | `vite build` | — | — | **built in 17.77s**, 1655 modules |
-| Secret scan | `evidence/secret_scan.py` | 136 tracked files | — | **0 unacknowledged findings** |
+| Secret scan | `evidence/secret_scan.py` | every tracked file | — | **0 unacknowledged findings** |
 | **Total automated** | | **20** | **262** | **262 passed, 0 failed** |
 
 **Backend statement coverage: 90% (847 of 943 statements).**

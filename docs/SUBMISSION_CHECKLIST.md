@@ -24,12 +24,16 @@ Legend: **[x]** done and verifiable · **[ ]** still requires the author
       configuration, how to run, test accounts, testing, limitations, AI-use note
 - [x] **Meaningful commit history** — work committed in separate, purposeful
       commits rather than one bulk upload
-- [ ] **Final release `v1.0-final`** — tag pushed; publish the release notes on
-      GitHub and paste the link into the report title page and slide 1
-- [ ] **Passing GitHub Actions run** — open the Actions tab and confirm the run
-      for the final commit is green
+- [x] **Assessed version tagged `v1.1-final`** — annotated tag pushed, carrying the
+      verified figures in its message. `v1.0-final` was left where it was rather
+      than moved, so both versions stay identifiable. No GitHub Release object is
+      published; the tag is the version marker and resolves publicly at
+      `/releases/tag/v1.1-final`
+- [x] **Passing GitHub Actions run** — run #5 on the final commit, all six jobs
+      green. Captured in `evidence/screenshots/23-ci-run-passing.png` and recorded
+      in `evidence/ci_evidence.json`
 - [ ] **Repository accessible to the lecturer** until marking and moderation are
-      complete
+      complete — the repository is public; keep it that way
 
 ## 2. Working prototype
 
@@ -74,16 +78,22 @@ Legend: **[x]** done and verifiable · **[ ]** still requires the author
 ## 4. Report (PDF)
 
 - [x] Follows the required structure, every section within its word allocation
-- [x] Approximately 1,665 body words, excluding title page, references and
-      appendices
+- [x] 1,599 body words, excluding the title page, tables, figure captions,
+      references and appendices. `evidence/finalise_report.py` prints the count per
+      section, so it is measured rather than estimated
 - [x] Harvard referencing, Australian/British English
-- [x] Architecture diagram and data-model figure included
+- [x] Enlarged architecture diagram (Figure 1), data-model figure (Figure 2) and a
+      four-screen workflow composite (Figure 3), each on its own landscape page
 - [x] Verified test figures — no superseded or unsupported number remains
+- [x] Appendices A–G: evidence map, representative tests with expected and actual
+      results, planned-versus-completed matrix, problem/fix/regression log, CI and
+      release evidence, full-page screenshots, AI-use declaration
+- [x] Every figure and appendix cross-referenced from the body text
+- [x] No placeholder, warning box or unfinished checklist text remains
 - [x] Honest limitations section
-- [x] AI-use declaration present
-- [ ] **Insert your name, student ID, lecturer and submission date** on the
-      title page
-- [ ] **Insert the `v1.0-final` release link** on the title page
+- [x] The assessed tag is cited on the title page
+- [ ] **Write your name, student ID, lecturer and submission date** on the ruled
+      fields on the title page — the only four blanks left in the document
 - [ ] **Read the reflection and AI declaration aloud** and adjust anything that
       is not how you would put it. You must be able to defend every sentence
 

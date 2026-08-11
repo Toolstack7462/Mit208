@@ -97,6 +97,10 @@ REPLACEMENTS: list[tuple[str, str]] = [
     # prototype lacks is a limiter that holds state across processes.
     ("No production MFA, rate limiting or token revocation",
      "No MFA, token revocation or cross-process rate limiting"),
+    # The flag no longer claims to detect authorship, so the bullet states what it
+    # does rather than disclaiming what it was previously called.
+    ("AI-generated flag is a simple text-pattern heuristic",
+     "Templated-language flag is phrase matching, not authorship detection"),
 
     # --- Slide 4: the flow line wrapped onto a second line that sat below its
     # container. The four colour chips are handled by shape name in CHIPS, because

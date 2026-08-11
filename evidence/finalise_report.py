@@ -410,13 +410,13 @@ BODY = {
     # --- 6. Problems, changes and limitations -------------------------------
     "Two significant defects": (
         "Two defects shaped the final changes. First, any analyst action was accepted "
-        "from any state: only a repeat was refused, so an email that had never been held "
-        "could be released, recording a decision nobody made in the very trail meant to "
-        "hold analysts accountable. An explicit action-to-source-state table now governs "
-        "both routes that can move an email. Second, the ownership check on release "
-        "requests tested the caller's role before comparing the recipient, so an analyst "
-        "or administrator could raise a request against any mailbox, recording a release "
-        "the recipient never asked for. That endpoint is now staff-only."
+        "from any state: only a repeat was refused, so an email never held could be "
+        "released, recording a decision nobody made in the very trail meant to hold "
+        "analysts accountable. An explicit action-to-source-state table now governs both "
+        "routes that can move an email. Second, the ownership check on release requests "
+        "tested the caller's role before comparing the recipient, so an analyst or "
+        "administrator could raise a request against any mailbox, recording a release "
+        "nobody asked for. That endpoint is now staff-only."
     ),
     "A third problem was malformed JSON": (
         "A third problem was malformed JSON in the stored scoring reasons: the handler "
@@ -435,25 +435,22 @@ BODY = {
         "The prototype meets its functional objectives. Analysts can authenticate, "
         "inspect explainable indicators and apply validated "
         "actions. Staff data is scoped by recipient, and a staff member can raise one "
-        "controlled release request for an owned held message; approval updates "
-        "request, email, review and audit records together. My strongest learning "
+        "controlled release request; approval updates request, email, review and audit "
+        "records together. My strongest learning "
         "outcome was that interface restrictions are not security controls: every role, "
         "ownership and state rule must be rechecked server-side and, where possible, "
-        "backed by a database constraint. I also learned that a high test count matters "
-        "less than representative positive, negative, integration and regression "
-        "scenarios tied to genuine defects."
+        "backed by a database constraint. A high test count also matters less than "
+        "representative negative, integration and regression scenarios tied to real "
+        "defects."
     ),
     "Passing local tests": (
         "Passing tests locally is not the same as being reproducible, so the evidence is "
-        "kept independent of this machine: the continuous-integration run passes on the "
-        "public repository and the assessed commit carries a tag, both shown in "
-        "Appendix E, while Appendix A maps every claim here to the file that supports it "
-        "and Appendix G declares my use of generative AI. The clearest limits on what has "
-        "been demonstrated are the synthetic dataset and the absence of a browser-level "
-        "test: the workflow is proven at the API boundary rather than through a driven "
-        "browser. Future work should close that gap first, then strengthen session "
-        "controls, before any move towards real header ingestion or an independently "
-        "evaluated classifier."
+        "independent of this machine: the continuous-integration run passes on the public "
+        "repository and the assessed commit carries a tag, both shown in Appendix E. "
+        "Appendix A maps every claim here to the file supporting it, and Appendix G "
+        "declares my use of generative AI. The clearest limits are the synthetic dataset "
+        "and the absence of a browser-level test: the workflow is proven at the API "
+        "boundary. Future work should close that gap, then strengthen session controls."
     ),
 
     # --- Conclusion ----------------------------------------------------------
@@ -461,13 +458,12 @@ BODY = {
         "PhishGuard demonstrates a coherent, explainable phishing-triage workflow with "
         "role-based access, validated state changes, controlled release requests, audit "
         "evidence and repeatable testing. The final review improved reliability and "
-        "security without replacing the architecture or overstating the rule engine as "
-        "machine learning. It is supported by 262 automated tests, 22 live API checks on "
-        "each database engine, 24 labelled screenshots and a recording of the running "
-        "application, all reproducible from the repository. Its boundaries are stated "
-        "rather than obscured: synthetic data, simulated authentication headers and no "
-        "trained classifier. Realistic next steps are a browser-level test suite and "
-        "stronger session controls."
+        "security without replacing the architecture or overstating the rule engine. It "
+        "is supported by 262 automated tests, 22 live API checks on each database engine, "
+        "24 labelled screenshots and a recording of the running application, all "
+        "reproducible from the repository. Its boundaries are stated: synthetic data, "
+        "simulated authentication headers and no trained classifier. Realistic next steps "
+        "are a browser-level test suite and stronger session controls."
     ),
 }
 
@@ -792,6 +788,72 @@ def load_ci() -> tuple[dict, list[list[str]]]:
     return rec, rows
 
 
+def scrub_hidden(doc) -> list[str]:
+    """Remove anything a marker could open that is not part of the report.
+
+    A submitted DOCX should carry no comments, no tracked changes, no hidden runs
+    and no authorship metadata. Each is checked and reported rather than assumed
+    absent, so the output says what was actually found.
+    """
+    notes: list[str] = []
+    W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    body = doc.element.body
+
+    # Comment anchors and ranges in the body.
+    removed = 0
+    for tag in ("commentRangeStart", "commentRangeEnd", "commentReference"):
+        for el in body.iter(f"{W}{tag}"):
+            el.getparent().remove(el)
+            removed += 1
+    notes.append(f"comment references removed: {removed}")
+
+    # Comment and people parts, if Word ever created them.
+    dropped = []
+    for rel_id, rel in list(doc.part.rels.items()):
+        if any(k in rel.reltype for k in ("/comments", "/people", "/commentsExtended")):
+            doc.part.drop_rel(rel_id)
+            dropped.append(rel.reltype.rsplit("/", 1)[-1])
+    notes.append(f"comment parts dropped: {dropped or 'none present'}")
+
+    # Tracked changes: accept insertions (unwrap) and drop deletions.
+    ins = dels = 0
+    for el in list(body.iter(f"{W}ins")):
+        parent = el.getparent()
+        for child in list(el):
+            parent.insert(list(parent).index(el), child)
+        parent.remove(el)
+        ins += 1
+    for el in list(body.iter(f"{W}del")):
+        el.getparent().remove(el)
+        dels += 1
+    notes.append(f"tracked changes: {ins} insertions accepted, {dels} deletions dropped")
+
+    # Runs explicitly marked hidden would be invisible on the page but present in
+    # the file, so they are removed outright.
+    hidden_runs = 0
+    for v in list(body.iter(f"{W}vanish")):
+        run = v.getparent().getparent()
+        if run is not None and run.tag == f"{W}r":
+            run.getparent().remove(run)
+            hidden_runs += 1
+    notes.append(f"hidden runs removed: {hidden_runs}")
+
+    cp = doc.core_properties
+    cp.author = ""
+    cp.last_modified_by = ""
+    cp.comments = ""
+    cp.category = ""
+    cp.keywords = ""
+    cp.subject = ""
+    cp.title = "PhishGuard — Final Project Report (MIT208 Assessment 3)"
+    cp.content_status = ""
+    cp.identifier = ""
+    cp.language = "en-AU"
+    cp.revision = 1
+    notes.append("core properties scrubbed of authorship and draft metadata")
+    return notes
+
+
 def word_count(text: str) -> int:
     return len(text.split())
 
@@ -1015,9 +1077,14 @@ def main() -> int:
              f"{total:,} words in the body (excluding the title page, tables, figure "
              f"captions, references and appendices)")
 
+    # -- 7. Hidden content: comments, tracked changes, metadata -------------
+    hidden = scrub_hidden(doc)
+
     doc.save(str(dst))
 
     print(f"Report written: {dst}")
+    for line in hidden:
+        print(f"  {line}")
     print(f"\nBody word count by paragraph (target 1,500-1,600):")
     for label, n in counts:
         print(f"  {n:>4}  {label}")

@@ -25,6 +25,9 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from index_section import write_section  # noqa: E402
+
 BASE = "http://localhost:5173"
 API = "http://127.0.0.1:8000"
 OUT = Path(__file__).resolve().parent / "screenshots"
@@ -95,23 +98,18 @@ def main() -> int:
             context.close()
             browser.close()
 
-    # Rewrite the PostgreSQL section rather than appending it, so running this
-    # script twice does not leave two copies in the index.
-    index = OUT / "INDEX.md"
-    heading = "## PostgreSQL evidence"
-    if index.exists():
-        body = index.read_text(encoding="utf-8")
-        body = body.split(heading)[0].rstrip() + "\n"
-        section = [
-            f"\n{heading}\n",
-            "Captured by `evidence/capture_postgres_evidence.py` against the "
-            "application running on PostgreSQL 16.6, which the script verifies "
-            "before taking a single image.\n",
-            "| File | What it shows |",
-            "|---|---|",
-        ]
-        section += [f"| `{name}` | {desc} |" for name, desc in shots]
-        index.write_text(body + "\n".join(section) + "\n", encoding="utf-8")
+    # Replace this script's own section in place, so running it twice does not
+    # duplicate it and does not disturb the section capture_ci_evidence.py owns.
+    lines = [
+        "Captured by `evidence/capture_postgres_evidence.py` against the application "
+        "running on PostgreSQL 16.6, which the script verifies before taking a single "
+        "image.",
+        "",
+        "| File | What it shows |",
+        "|---|---|",
+    ]
+    lines += [f"| `{name}` | {desc} |" for name, desc in shots]
+    write_section(OUT / "INDEX.md", "## PostgreSQL evidence", lines)
     print(f"\n{len(shots)} PostgreSQL screenshots written to {OUT}")
     return 0
 

@@ -38,6 +38,9 @@ component named here exists in the repository at the path given.
 │                                                                          │
 │  deps.py       get_current_user (JWT → DB user) · require_roles(...)      │
 │  schemas.py    Pydantic v2 request/response models + input constraints    │
+│  transitions.py  the email state machine — which action is valid from     │
+│                which status; imported by emails.py AND requests.py, and    │
+│                mirrored by frontend/src/lib/transitions.js                 │
 │  scoring.py    rule-based risk engine (pure function, no I/O)             │
 │  security.py   bcrypt hashing (72-byte guard) · typed JWT encode/decode   │
 │  ratelimit.py  per-IP failed-login limiter                                │
@@ -89,19 +92,21 @@ The primary user journey — the one demonstrated in the walkthrough — is:
     GET  /api/emails            -> risk-sorted list
     GET  /api/emails/{id}       -> body + reasons + auth results
     POST /api/emails/{id}/quarantine | release | confirm-phishing | feedback
+        └─> transitions.is_allowed(action, email.status)?  409 if not
         └─> INSERT analyst_reviews
         └─> UPDATE email_records.status  (rejected with 409 if unchanged)
         └─> INSERT audit_logs
 
  3. STAFF RELEASE REQUEST
     GET  /api/emails            -> staff see ONLY mail addressed to them
-    POST /api/release-requests  (reason >= 10 chars; email must be held;
-                                 one open request per email per user)
+    POST /api/release-requests  (STAFF ONLY, own mail only; reason >= 10 chars;
+                                 email must be held; one open request per user)
         └─> INSERT staff_release_requests (status = "pending")
         └─> INSERT audit_logs
 
  4. ANALYST DECISION
     POST /api/release-requests/{id}/decision  {approved|denied}
+        └─> approved ? transitions.is_allowed("release", email.status)? 409 if not
         └─> UPDATE staff_release_requests (status, reviewer, note, timestamp)
         └─> approved ? UPDATE email_records.status = "released"
                        + INSERT analyst_reviews
@@ -130,6 +135,28 @@ Request
   ├─ Handler ......................... business logic + DB session
   └─ Response / exception handler .... consistent error envelope
 ```
+
+### The email state machine
+
+`app/transitions.py` is the only place the workflow rules are written down. Both
+paths that can move an email import it, so they cannot disagree:
+
+| Action | Valid from | Moves to |
+|---|---|---|
+| `quarantine` | `inbox`, `released`, `safe` | `quarantined` |
+| `release` | `quarantined`, `confirmed_phishing` | `released` |
+| `confirm_phishing` | every status except itself | `confirmed_phishing` |
+| `feedback` | any status | *(no change)* |
+
+`quarantine` is deliberately **not** valid from `confirmed_phishing`: that would
+replace a stronger verdict with a weaker one. `HOLDABLE_STATUSES` — the states a
+staff release request may be raised from — is *derived* from the `release` row
+rather than declared separately, so the action and the request rule stay in step.
+
+`frontend/src/lib/transitions.js` mirrors the same table so the interface only
+offers transitions the API will accept. Because a mirror can drift,
+`tests/test_transitions.py::test_the_frontend_mirror_matches_the_backend_rules`
+reads the JavaScript file and compares it with the Python one.
 
 **Authorisation is never taken from the token.** `get_current_user` decodes the
 JWT only to obtain the subject (email), then re-reads the user row from the

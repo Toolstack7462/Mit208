@@ -24,6 +24,8 @@ The reproduction commands assume the setup in the README.
 | [BUG-14](#bug-14) | Medium | Token and password handling | Fixed |
 | [BUG-15](#bug-15) | Low | Notification correctness | Fixed |
 | [BUG-16](#bug-16) | Medium | Concurrency / error mapping | Fixed |
+| [BUG-17](#bug-17) | High | Workflow state machine / audit accuracy | Fixed |
+| [BUG-18](#bug-18) | Medium | Authorisation / release requests | Fixed |
 
 ---
 
@@ -672,8 +674,165 @@ now accepts either, and is exercised with both drivers' exact wording.
 `test_pending_request_conflict_is_recognised_on_both_engines` (parameterised over
 both drivers' wording plus three failures that must *not* match).
 
-Confirmed by running the full suite on both engines: **118 passed on PostgreSQL
-16.6 and 118 passed on SQLite.**
+Confirmed by running the full suite on both engines: **170 passed on PostgreSQL
+16.6 and 170 passed on SQLite** (re-run 11 August 2026).
+
+---
+
+## BUG-17
+### Any analyst action was accepted from any state, so the API recorded decisions that had not been made
+
+**Severity:** High — the audit trail, which is the project's accountability
+control, could be made to state something untrue through the normal interface.
+
+**How it was found**
+
+A third-pass review of the workflow rules. The endpoints were read against the
+question "what does this action *mean*, and from which states is it meaningful?"
+— a question the code never asked.
+
+**Symptom**
+
+`_apply_action` contained exactly one guard: refuse an action whose target status
+equals the current status. Everything else was permitted. So an analyst could
+release an email that had never been quarantined:
+
+```
+POST /api/emails/6/release        (email 6 status = "inbox")
+200 OK   {"id": 6, "status": "released", ...}
+```
+
+Email 6 had been delivered normally and was never withheld from anyone, yet the
+system now recorded an analyst decision to release it, wrote a row in
+`analyst_reviews`, and appended an audit entry reading `release on email '…'`.
+The same hole allowed `quarantine` on an email already `confirmed_phishing`,
+which silently downgraded a phishing verdict to a weaker one.
+
+The interface made this easy rather than obscure: `EmailDetailPanel` rendered all
+three status-changing buttons, always enabled, for every email.
+
+**Why it mattered more than a tidiness issue**
+
+`docs/SECURITY.md` presents the audit log as the control that makes analyst
+decisions accountable. An audit trail that faithfully records actions the
+workflow should never have accepted is not accountability — it is a record of
+noise that a reader cannot distinguish from a real decision.
+
+**Investigation**
+
+Every path that can move an email was traced. There were two, and they disagreed:
+
+1. `POST /api/emails/{id}/{action}` — no source-state rule at all.
+2. `POST /api/release-requests/{id}/decision` with `approved` — set
+   `email.status = "released"` unconditionally, so approving a request that had
+   been sitting in the queue while the email was acted on elsewhere forced it to
+   `released` from whatever state it had reached.
+
+The release-request *creation* path already had the right idea — `HOLDABLE_STATUSES`
+— but it was a local constant used by one endpoint, not a rule the system shared.
+
+**Fix** — new module `backend/app/transitions.py`
+
+The state machine is now declared once and imported by both paths:
+
+| Action | Valid source statuses | Reasoning |
+|---|---|---|
+| `release` | `quarantined`, `confirmed_phishing` | Releasing is only meaningful for email that is actually being withheld |
+| `quarantine` | `inbox`, `released`, `safe` | Withhold email currently being delivered. **Not** from `confirmed_phishing`, which would downgrade a stronger verdict |
+| `confirm_phishing` | every status except itself | A phishing verdict must stay reachable even for delivered or released email — that is when it matters most |
+| `feedback` | all | Records an analyst note and changes no status |
+
+`HOLDABLE_STATUSES` is now *derived* from the release row rather than declared
+separately, so the release action and the release-request rule cannot drift
+apart. `decide_request` applies the same `is_allowed("release", …)` check before
+approving, and refuses a stale approval with 409 while leaving the request
+`pending`. Denial is deliberately still permitted, because it changes no email
+status — otherwise a request against an already-released email could never be
+cleared.
+
+The no-op check was kept ahead of the new rule so the common double-click case
+still gets the friendlier `Email is already 'quarantined'; no action taken.`
+
+**The interface half of the fix** — `frontend/src/lib/transitions.js`
+
+The panel now derives button state from the same table, disables an action that
+is not valid from the current status, and explains why in the button's tooltip.
+The staff button reads `Already Delivered` rather than inviting a request the
+server would refuse.
+
+The mirror is a duplicate of the backend table, so it can drift.
+`test_the_frontend_mirror_matches_the_backend_rules` reads the JavaScript file
+and compares it with `app/transitions.py`, which makes drift a test failure
+rather than a user-visible inconsistency.
+
+**Verification** — `backend/tests/test_transitions.py` (52 tests) and
+`frontend/src/components/EmailDetailPanel.test.jsx` (16 tests).
+
+Confirmed as a genuine regression: with the fix stashed and the new tests left in
+place, **7 of them fail**; with the fix applied, all pass. The refusal is also
+proved not to write anything —
+`test_a_refused_transition_writes_no_review_and_no_audit_entry` compares the
+audit-log length and the `analyst_reviews` count either side of a rejected call.
+
+Live evidence: smoke check `[21]`, and
+`evidence/screenshots/18-invalid-transition-blocked.png` and
+`19-release-request-not-applicable.png`.
+
+---
+
+## BUG-18
+### An analyst could file a release request in a staff member's name
+
+**Severity:** Medium — an authorisation gap that put words in another user's
+mouth in the audit trail.
+
+**How it was found**
+
+Reading `create_request` immediately after BUG-17, checking each guard against
+the role it was supposed to constrain.
+
+**Symptom**
+
+The endpoint was declared as:
+
+```python
+current: User = Depends(require_roles("staff", "analyst", "admin"))
+...
+if current.role == "staff" and email.recipient != current.email:
+    raise HTTPException(403, "You can only request release of your own email")
+```
+
+The ownership check was conditional on the caller being staff, so analysts and
+admins skipped it entirely and could raise a request against **any** mailbox. The
+resulting row records `requested_by` as the analyst, and the queue then displays
+a release request for an email belonging to someone who never asked for one.
+
+**Investigation**
+
+Two separate faults, one of which hid the other:
+
+1. The role list was too wide. An analyst can already release an email directly,
+   so there is no workflow in which they need to *ask* for one. The capability
+   existed only because the dependency was written permissively.
+2. The ownership guard was written as a role-conditional rather than an
+   invariant, which is the pattern that turns "a rule for staff" into "no rule
+   for anyone else".
+
+**Fix** — `backend/app/routers/requests.py`
+
+Creation is now `require_roles("staff")`, and the ownership check is
+unconditional: a staff member may act only on mail addressed to them. Analysts
+and admins keep full read access to the queue and remain the only roles that can
+*decide* a request, which is the separation the workflow actually wants.
+
+**Verification** — `backend/tests/test_transitions.py`:
+`test_an_analyst_or_admin_cannot_raise_a_release_request` (parameterised over
+both roles), `test_the_ownership_rule_is_not_conditional_on_role`,
+`test_staff_cannot_request_release_of_someone_else_s_email`, and
+`test_reviewers_keep_read_access_to_the_whole_queue`, which guards against
+over-correcting and locking analysts out of the queue they have to review.
+
+Live evidence: smoke check `[22]`.
 
 ---
 
@@ -686,6 +845,6 @@ Recorded for honesty — these were considered and consciously left alone.
 | JWT is stored in `localStorage`, so it is readable by any script that achieves XSS | Kept. The alternative (`HttpOnly` cookie) needs CSRF protection and a same-site deployment, which is a larger change than this MVP warrants. Documented as a known limitation in `docs/SECURITY.md` and the README. |
 | Tokens now carry a `jti`, so revocation is *possible* — but no revocation list exists | Not implemented. A deny-list needs shared storage to be meaningful across restarts and workers, which is the same infrastructure the rate limiter would need. The `jti` is the groundwork; the feature is listed as future work rather than implied to work. |
 | The login page pre-fills the demo analyst credentials | Kept deliberately. These are synthetic accounts on a `.local` domain, the rubric asks for test credentials, and one-click sign-in matters for the live showcase. It would be wrong in a real product and is labelled as demo-only. |
-| `status`, `role`, `risk_level` are `VARCHAR`, not `ENUM`/`CHECK` | Not changed. The API constrains all three, and adding database enums would mean a migration path this MVP does not have. Listed as future work. |
+| `status`, `role`, `risk_level` are `VARCHAR` with a `CHECK`, not a native PostgreSQL `ENUM` | Kept as `CHECK`. BUG-13 added the constraints, so invalid values are rejected by the database on both engines; a native `ENUM` would add a type-migration path this MVP does not have, and SQLite has no equivalent. |
 | The audit log has no pagination beyond `limit` | Not changed. `limit` is capped at 1000, which comfortably exceeds the demo data. Noted as future work. |
 | `ml_model.py` raises `NotImplementedError` | Correct as-is. It is a documented integration point for future work, is not reachable from any running path, and is stated as unimplemented in the README, the architecture doc and the report rather than being implied to work. |

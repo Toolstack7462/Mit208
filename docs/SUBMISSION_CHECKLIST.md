@@ -35,7 +35,7 @@ Legend: **[x]** done and verifiable · **[ ]** still requires the author
 
 - [x] **Core workflow end to end** — ingest → score → quarantine → analyst
       review → staff request → analyst decision → release → audit.
-      Proven by 20/20 live checks in `backend/smoke_test.py`
+      Proven by 22/22 live checks in `backend/smoke_test.py`
 - [x] **All modules integrated** — React frontend, FastAPI backend and the
       database exchange data over HTTP; verified by the smoke workflow
 - [x] **Handles realistic input** — validation, meaningful error messages and
@@ -45,19 +45,19 @@ Legend: **[x]** done and verifiable · **[ ]** still requires the author
 - [x] **Local PostgreSQL run** — done on PostgreSQL 16.6: `database/schema.sql`
       applied with `ON_ERROR_STOP`, all 10 CHECK constraints and the partial
       unique index confirmed in `pg_constraint`/`pg_indexes`, seed verified,
-      the full 118-test suite passed, the 20-check live workflow passed, and
+      the full 170-test suite passed, the 22-check live workflow passed, and
       `/system/database-status` captured showing `"engine": "postgresql"`
       (`evidence/screenshots/18-postgresql-database-status.png`)
 
 ## 3. Testing evidence
 
-- [x] **Positive test of each core function** — 118 backend tests (on both
-      engines), 69 frontend tests
+- [x] **Positive test of each core function** — 170 backend tests (on both
+      engines), 92 frontend tests
 - [x] **Invalid-input tests** — blank, malformed, over-long and whitespace-only
       input across every write endpoint
 - [x] **Error-handling evidence** — consistent error envelope with a traceable
       `request_id`; the UI shows a retryable message instead of an empty screen
-- [x] **Integration evidence** — 20 live checks against a running server, run
+- [x] **Integration evidence** — 22 live checks against a running server, run
       against both SQLite and PostgreSQL 16.6
 - [x] **Security/privacy evidence** — `docs/SECURITY.md` maps each control to the
       test that proves it
@@ -67,7 +67,7 @@ Legend: **[x]** done and verifiable · **[ ]** still requires the author
       BUG-05, BUG-09, BUG-12 and BUG-15
 - [x] **Bug log with at least two meaningful problems** — 16 entries, each
       reproduced first, then fixed, then locked in by a test
-- [x] **Coverage measured** — 89% backend statement coverage (823/924)
+- [x] **Coverage measured** — 90% backend statement coverage (847/943)
 - [x] **ML/AI expectations** — not applicable and stated as such: there is no
       trained model, so no accuracy metric is claimed anywhere
 
@@ -146,17 +146,17 @@ python -m venv .venv && .venv\Scripts\Activate.ps1
 pip install -r requirements-dev.txt
 cp .env.example .env
 python -c "import secrets; print(secrets.token_urlsafe(48))"   # paste into SECRET_KEY
-python -m pytest                      # expect: 118 passed
+python -m pytest                      # expect: 170 passed
 python -m app.seed --reset
 uvicorn app.main:app --port 8000
 
 # Frontend, in a second terminal
 cd frontend && npm install
-npm test                              # expect: 69 passed
+npm test                              # expect: 92 passed
 npm run dev                           # http://localhost:5173
 
 # End-to-end, in a third terminal
-cd backend && python smoke_test.py    # expect: ALL 20/20 CHECKS PASSED
+cd backend && python smoke_test.py    # expect: ALL 22/22 CHECKS PASSED
 ```
 
 Sign in as `analyst@phishguard.local` / `Analyst@123`.

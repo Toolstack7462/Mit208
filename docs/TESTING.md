@@ -1,10 +1,12 @@
 # PhishGuard — Test Strategy, Evidence and Results
 
 Every figure below was produced by running the commands shown, on this
-repository, on **5 August 2026**. Nothing here is estimated.
+repository, on **11 August 2026**. Nothing here is estimated.
 
-**Environment:** Windows 11, Python 3.14.3, Node.js 24.14.1, SQLite (automated
-tests). The `backend-postgres` CI job additionally runs against PostgreSQL 16.
+**Environment:** Windows 11, Python 3.14.3, Node.js 24.14.1, PostgreSQL 16.6.
+The suite runs on in-memory SQLite by default and on PostgreSQL when
+`TEST_DATABASE_URL` is set; both were run for this record, as was the
+`backend-postgres` CI job.
 
 ---
 
@@ -12,14 +14,15 @@ tests). The `backend-postgres` CI job additionally runs against PostgreSQL 16.
 
 | Layer | Tool | Files | Tests | Result |
 |---|---|---|---|---|
-| Backend unit + API (SQLite) | pytest 9.1.1 | 8 | **118** | **118 passed** |
-| Backend unit + API (**PostgreSQL 16.6**) | pytest 9.1.1 | 8 | **118** | **118 passed** |
-| Frontend unit + component | vitest 2.1.9 | 9 | **69** | **69 passed** |
-| Live end-to-end (running server) | `smoke_test.py` | 1 | **20 checks** | **20/20 passed** |
-| Production build | `vite build` | — | — | **built in 7.27s**, 1653 modules |
-| **Total automated** | | **17** | **187** | **187 passed, 0 failed** |
+| Backend unit + API (SQLite) | pytest 9.1.1 | 9 | **170** | **170 passed** |
+| Backend unit + API (**PostgreSQL 16.6**) | pytest 9.1.1 | 9 | **170** | **170 passed** |
+| Frontend unit + component | vitest 2.1.9 | 11 | **92** | **92 passed** |
+| Live end-to-end (running server) | `smoke_test.py` | 1 | **22 checks** | **22/22 passed** |
+| Production build | `vite build` | — | — | **built in 17.77s**, 1655 modules |
+| Secret scan | `evidence/secret_scan.py` | 121 tracked files | — | **0 unacknowledged findings** |
+| **Total automated** | | **20** | **262** | **262 passed, 0 failed** |
 
-**Backend statement coverage: 89% (823 of 924 statements).**
+**Backend statement coverage: 90% (847 of 943 statements).**
 
 The backend suite was run twice — once on in-memory SQLite and once against a
 real PostgreSQL 16.6 server — and passes identically on both. That is what
@@ -31,34 +34,38 @@ SQLite would not (see BUG-03 and BUG-16, both of which are engine-specific).
 ## 2. How to reproduce
 
 ```bash
-# Backend — 110 tests, no server or database needed (in-memory SQLite)
+# Backend — 170 tests, no server or database needed (in-memory SQLite)
 cd backend
 python -m venv .venv && .venv\Scripts\Activate.ps1     # or: source .venv/bin/activate
 pip install -r requirements-dev.txt
-python -m pytest                                        # 118 passed (SQLite)
+python -m pytest                                        # 170 passed (SQLite)
 
 # The same suite against PostgreSQL, which is the assessed target:
 #   createdb phishguard_test
 #   $env:TEST_DATABASE_URL="postgresql+psycopg2://USER:PASS@localhost:5432/phishguard_test"
-#   python -m pytest                                      # 118 passed (PostgreSQL)
+#   python -m pytest                                      # 170 passed (PostgreSQL)
 python -m pytest --cov=app --cov-report=term-missing    # + coverage
 
-# Frontend — 69 tests
+# Frontend — 92 tests
 cd ../frontend
 npm install
-npm test                                                # 69 passed
+npm test                                                # 92 passed
 npm run build                                           # production build
 
-# Live end-to-end — 20 checks against a real server
+# Live end-to-end — 22 checks against a real server
 cd ../backend
 python -m app.seed --reset
 uvicorn app.main:app --port 8000        # in one terminal
-python smoke_test.py                    # in another -> ALL 20/20 CHECKS PASSED
+python smoke_test.py                    # in another -> ALL 22/22 CHECKS PASSED
+
+# Secret scan — every tracked file, standard library only, exits 1 on a finding
+cd ..
+python evidence/secret_scan.py          # -> SECRET SCAN CLEAN
 ```
 
 ---
 
-## 3. Backend suite — 118 tests, run on both engines
+## 3. Backend suite — 170 tests, run on both engines
 
 | File | Tests | Covers |
 |---|---|---|
@@ -70,6 +77,7 @@ python smoke_test.py                    # in another -> ALL 20/20 CHECKS PASSED
 | `tests/test_security.py` | 27 | Secret-key enforcement, rate limiting, credential handling, privilege escalation, token claims and types, bcrypt input boundary, security headers |
 | `tests/test_release_workflow.py` | 14 | Duplicate suppression, justification rules, held-only rule, decision path |
 | `tests/test_integrity.py` | 35 | Defensive parsing of stored data, database CHECK constraints, the partial unique index, decision-completeness, transaction rollback, and the concurrent-duplicate race |
+| `tests/test_transitions.py` | 52 | The email state machine (BUG-17) and the staff-only release-request rule (BUG-18): the rule table itself, every permitted and refused transition over the API, no write on a refusal, the frontend mirror agreeing with the backend, ownership enforcement, and approval of a stale request |
 
 Each test runs against a **freshly created and seeded database** (`tests/conftest.py`),
 so cases are independent regardless of order and the real `phishguard.db` is
@@ -96,27 +104,30 @@ app/routers/__init__.py        0      0   100%
 app/routers/audit.py          14      1    93%
 app/routers/auth.py           53      4    92%
 app/routers/dashboard.py      26      3    88%
-app/routers/emails.py        105      7    93%
-app/routers/requests.py       77      2    97%
+app/routers/emails.py        108      3    97%
+app/routers/requests.py       80      1    99%
 app/schemas.py               159      7    96%
 app/scoring.py               101      5    95%
 app/security.py               32      0   100%
 app/seed.py                   60     60     0%   <- CLI script, exercised by smoke test
+app/transitions.py            13      0   100%
 ----------------------------------------------
-TOTAL                        924    101    89%
+TOTAL                        943     96    90%
 ```
 
 The two 0% modules are honest exclusions: `ml_model.py` is a documented
 placeholder that is deliberately not wired in, and `seed.py` is a command-line
 script covered by the live smoke test instead. Excluding those two, coverage of
-the running application code is **95%** (823 of 861 statements).
+the running application code is **96%** (847 of 880 statements).
 
 ---
 
-## 4. Frontend suite — 69 tests
+## 4. Frontend suite — 92 tests
 
 | File | Tests | Covers |
 |---|---|---|
+| `src/lib/transitions.test.js` | 7 | The mirrored state machine: release only from a held status, quarantine never downgrading a phishing verdict, feedback valid everywhere, no self-targeting transition, tooltip wording |
+| `src/components/EmailDetailPanel.test.jsx` | 16 | Which action buttons are enabled for each of the five statuses, in both analyst and staff mode; a disabled action does not fire; a permitted one does; the busy state |
 | `src/lib/errors.test.js` | 13 | Error-message mapping: API envelope, FastAPI `detail`, validation list, unreachable backend, timeout, 403/429/500, never-empty guarantee |
 | `src/lib/risk.test.js` | 7 | Risk level → UI category, unknown level, metadata completeness, date formatting |
 | `src/App.test.jsx` | 10 | Route protection and role-based access for all three roles |
@@ -134,13 +145,13 @@ which means a regression in labelling breaks a test.
 
 ---
 
-## 5. Live end-to-end evidence — 20/20
+## 5. Live end-to-end evidence — 22/22
 
-Actual captured output of `python smoke_test.py` against a running server with a
-freshly seeded database:
+Actual captured output of `python smoke_test.py` against a running Uvicorn server
+backed by **PostgreSQL 16.6** with a freshly seeded database:
 
 ```
-[1] health OK - engine=sqlite connected=True
+[1] health OK - engine=postgresql connected=True
 [2] logins OK (analyst + staff)
 [3] wrong password rejected (401): 'Incorrect email or password'
 [4] unauthenticated request rejected (401)
@@ -165,8 +176,12 @@ freshly seeded database:
 [20] approval released email #1 and was audited; 10 log entries:
      {'release_request_approved': 1, 'release_request_created': 2, 'feedback': 1,
       'release': 1, 'quarantine': 1, 'ingest_email': 1, 'login': 2, 'confirm_phishing': 1}
+[21] releasing email #10 that was never held rejected (409) and it stayed 'inbox':
+     "Cannot 'release' an email with status 'inbox'. This action applies only to
+      email in: quarantined, confirmed_phishing."
+[22] analyst blocked from raising a staff release request (403): 'Requires role: staff'
 
-ALL 20/20 CHECKS PASSED
+ALL 22/22 CHECKS PASSED
 ```
 
 This is the strongest single piece of integration evidence in the project: one
@@ -219,6 +234,10 @@ Mapped to the rubric's minimum testing areas.
 | TC23 | Repeat an action that changes nothing | 409, no extra audit row | As expected | Pass |
 | TC24 | Duplicate pending release request | 409 | As expected | Pass |
 | TC25 | Release request on a delivered email | 409 "not being held" | As expected | Pass |
+| TC25a | Release an email that was never held | 409 naming the valid source states; status unchanged; no review or audit row written | As expected | Pass |
+| TC25b | Quarantine an email already `confirmed_phishing` | 409 — the verdict is not downgraded | As expected | Pass |
+| TC25c | Approve a release request after the email was released elsewhere | 409; the request stays `pending` | As expected | Pass |
+| TC25d | Deny that same stale request | 200 — denial changes no email status, so it stays available | As expected | Pass |
 | TC26 | **Backend unreachable (frontend)** | Visible error + retry, **not** an empty table | As expected | Pass |
 | TC27 | 503 with a request id (frontend) | Message + traceable reference shown | As expected | Pass |
 | TC28 | Every error response | Consistent envelope + `X-Request-ID` | As expected | Pass |
@@ -227,7 +246,7 @@ Mapped to the rubric's minimum testing areas.
 
 | ID | Scenario | Expected | Actual | Status |
 |---|---|---|---|---|
-| TC29 | Frontend → API → DB → response | Full workflow over HTTP | 20/20 smoke checks | Pass |
+| TC29 | Frontend → API → DB → response | Full workflow over HTTP | 22/22 smoke checks | Pass |
 | TC30 | Approval propagates across tables | Request, email status and audit all updated | As expected | Pass |
 | TC31 | Score reasons survive the JSON round-trip | Stored as JSON, returned as a list | As expected | Pass |
 | TC32 | Seed against real PostgreSQL | 4 users, 8 emails | Asserted in the `backend-postgres` CI job | Pass (CI) |
@@ -240,6 +259,8 @@ Mapped to the rubric's minimum testing areas.
 | TC34 | Token signed with an attacker's key | 401 | As expected | Pass |
 | TC35 | Valid token with a tampered `role: admin` | 403 — role re-read from the DB | As expected | Pass |
 | TC36 | Staff requests another user's email | 403 | As expected | Pass |
+| TC36a | Analyst or admin raises a release request | 403 — creation is staff-only | As expected | Pass |
+| TC36b | Analyst reads the release-request queue | 200 — review access is unaffected | As expected | Pass |
 | TC37 | Staff reads the audit log | 403 | As expected | Pass |
 | TC38 | Unknown vs wrong password | Identical status and message | As expected | Pass |
 | TC39 | 11 failed logins from one IP | 429 + `Retry-After` | As expected | Pass |
@@ -269,30 +290,37 @@ Mapped to the rubric's minimum testing areas.
 | TC53 | BUG-01 returning — uninstallable pins | CI matrix on Python 3.11 / 3.12 / 3.13 |
 | TC54 | BUG-03 returning — DB-only truncation | `test_oversized_subject_rejected_not_500` + `backend-postgres` CI job |
 | TC55 | Normal search still works after BUG-09 | `test_search_finds_a_known_subject` |
+| TC56 | BUG-17 returning — an action accepted from an invalid source state | `test_releasing_an_email_that_was_never_held_is_refused`, `test_quarantine_cannot_downgrade_a_confirmed_phishing_verdict`, `test_a_refused_transition_writes_no_review_and_no_audit_entry` |
+| TC57 | BUG-17 returning in the interface — a button offering an invalid action | `EmailDetailPanel.test.jsx` (16 cases across all five statuses) |
+| TC58 | The frontend rule table drifting from the backend's | `test_the_frontend_mirror_matches_the_backend_rules` — reads `frontend/src/lib/transitions.js` and compares it with `app/transitions.py` |
+| TC59 | BUG-18 returning — a non-recipient raising a release request | `test_an_analyst_or_admin_cannot_raise_a_release_request`, `test_the_ownership_rule_is_not_conditional_on_role` |
+| TC60 | The permitted transitions still working after the guard was added | `test_every_permitted_transition_is_accepted` (6 cases) + smoke checks 12–14 |
 
 ---
 
-## 7. PostgreSQL verification (5 August 2026)
+## 7. PostgreSQL verification (11 August 2026)
 
 PostgreSQL is the assessed target while the automated suite defaults to SQLite,
 so the whole stack was run against a real PostgreSQL **16.6** server. This is the
 evidence behind every "behaves the same on both engines" claim in this project.
 
-**Cluster:** a throwaway PostgreSQL 16.6 instance on port 55432, created with
-`initdb`, used only for this verification and deleted afterwards.
+**Cluster:** a throwaway PostgreSQL 16.6 instance on port 5433, created with
+`initdb` from the official binaries, used only for this verification and deleted
+afterwards.
 
 ### What was verified
 
 | # | Check | Result |
 |---|---|---|
 | 1 | `psql -v ON_ERROR_STOP=1 -f database/schema.sql` | applied cleanly, exit 0 |
-| 2 | 10 `CHECK` constraints present in `pg_constraint` | confirmed |
+| 2 | ORM compiled against the PostgreSQL dialect | 10 `CHECK` constraints emitted |
 | 3 | Partial unique index present in `pg_indexes` | confirmed |
 | 4 | `python -m app.seed` **into the psql-created tables** (no `--reset`) | 4 users, 8 emails |
-| 5 | 7 invalid writes attempted directly in SQL | all 7 rejected |
-| 6 | Full backend suite with `TEST_DATABASE_URL` | **118 passed** |
-| 7 | `smoke_test.py` against the app on PostgreSQL | **20/20 passed** |
+| 5 | 6 invalid writes attempted directly in SQL | all 6 rejected |
+| 6 | Full backend suite with `TEST_DATABASE_URL` | **170 passed** |
+| 7 | `smoke_test.py` against the app on PostgreSQL | **22/22 passed** |
 | 8 | `/system/database-status` | `"engine":"postgresql","using_fallback":false` |
+| 9 | Screenshots 20–22 captured from the PostgreSQL-backed application | captured |
 
 ### The partial index, as PostgreSQL stores it
 
@@ -317,11 +345,15 @@ INSERT a second pending request for the same (email, user)
   ERROR: duplicate key value violates unique constraint
          "uq_request_one_pending_per_email_user"
   DETAIL: Key (email_id, requested_by)=(2, 3) already exists.
-INSERT a 'pending' request that names a reviewer
-  ERROR: violates check constraint "ck_request_decision_complete"
-INSERT an 'approved' request with no reviewer
+INSERT a pending request that already names a reviewer
   ERROR: violates check constraint "ck_request_decision_complete"
 ```
+
+The last of those — `ck_request_decision_complete`, which requires a decided
+request to name its reviewer and a pending one not to — is also covered from the
+application side by `test_a_decided_request_must_record_its_reviewer` and
+`test_a_pending_request_must_not_record_a_reviewer`, which run against this same
+PostgreSQL server as part of the 170.
 
 ### What running on PostgreSQL actually caught
 
@@ -335,7 +367,7 @@ Two things a SQLite-only run could not have found:
    the columns instead. It passed on PostgreSQL and failed on SQLite. Running
    both engines is what exposed it.
 
-Screenshots 18–20 in `evidence/screenshots/` were captured from the application
+Screenshots 20–22 in `evidence/screenshots/` were captured from the application
 while it was connected to PostgreSQL; `capture_postgres_evidence.py` refuses to
 run if the backend reports any other engine.
 
@@ -349,9 +381,9 @@ cd backend
 export DATABASE_URL=postgresql+psycopg2://USER:PASS@localhost:5432/phishguard_db
 export TEST_DATABASE_URL=postgresql+psycopg2://USER:PASS@localhost:5432/phishguard_test
 python -m app.seed          # NOT --reset: that would drop the psql-created tables
-python -m pytest            # 118 passed
+python -m pytest            # 170 passed
 uvicorn app.main:app --port 8000 &
-python smoke_test.py        # ALL 20/20 CHECKS PASSED
+python smoke_test.py        # ALL 22/22 CHECKS PASSED
 ```
 
 The `backend-postgres` CI job performs the same sequence on every push.
@@ -364,9 +396,10 @@ The `backend-postgres` CI job performs the same sequence on every push.
 
 | Job | What it does |
 |---|---|
-| `backend` | Installs and runs 75 tests + coverage on Python **3.11, 3.12 and 3.13** |
-| `backend-postgres` | Starts a PostgreSQL 16 service, applies `database/schema.sql`, seeds, and asserts 4 users + 8 emails |
-| `frontend` | `npm ci`, 50 vitest tests, production `vite build` |
+| `backend` | Installs and runs the 170 tests + coverage on Python **3.11, 3.12 and 3.13** |
+| `backend-postgres` | Starts a PostgreSQL 16 service, applies `database/schema.sql`, seeds and asserts 4 users + 8 emails, checks the constraints reject invalid SQL, then runs the whole 170-test suite against PostgreSQL |
+| `secrets` | Runs `evidence/secret_scan.py` over every tracked file and fails the build on any unacknowledged credential, key or token |
+| `frontend` | `npm ci`, the 92 vitest tests, production `vite build` |
 
 This matters for two reasons: the Python matrix is the regression guard for
 BUG-01, and the PostgreSQL job means the *official* target database is exercised
@@ -399,7 +432,7 @@ Stated honestly so no coverage claim is overstated.
    Tailwind breakpoints and wide tables scroll inside their own container, but
    this was verified by inspection, not by an automated device matrix.
 7. **Parts of `main.py`'s startup logging and a branch of the session teardown**
-   are not covered, which is why coverage is 89% and not higher. The two 0%
+   are not covered, which is why coverage is 90% and not higher. The two 0%
    modules are the unimplemented classifier placeholder and the seeding script.
 8. **Concurrency is tested by reproducing the race window, not by real parallel
    requests.** `test_a_concurrent_duplicate_request_gets_409_not_503` neutralises

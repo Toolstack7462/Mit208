@@ -39,6 +39,9 @@ Three roles: `analyst`, `staff`, `admin`.
 | Staff cannot read the audit log | `VIEWER = require_roles("analyst", "admin")` | `test_staff_cannot_reach_analyst_only_endpoints` |
 | Staff cannot decide release requests | `REVIEWER = require_roles("analyst", "admin")` | `test_staff_cannot_decide_requests` |
 | Staff see only their own requests | `requested_by == current.id` filter | `test_staff_sees_only_their_own_requests` |
+| **Only staff may raise a release request** | `REQUESTER = require_roles("staff")`. An analyst can release directly, so there is no workflow in which they need to ask — and allowing it let them file a request in a recipient's name (BUG-18) | `test_an_analyst_or_admin_cannot_raise_a_release_request` |
+| **Ownership is an invariant, not a role branch** | The check was `if current.role == "staff" and …`, so every other role skipped it. It is now unconditional | `test_the_ownership_rule_is_not_conditional_on_role` |
+| An action must be valid from the email's current state | `transitions.is_allowed(action, status)`, applied by both the analyst endpoints and the request-approval path (BUG-17) | `test_transitions.py` (52 tests) |
 | Dashboard figures are role-scoped | Same recipient filter applied to every aggregate | `test_dashboard_stats_shape` |
 | No endpoint reachable without a token | — | `test_every_protected_endpoint_requires_a_token` (7 endpoints) |
 
@@ -116,11 +119,23 @@ Actions covered: `login`, `ingest_email`, `quarantine`, `release`,
 `confirm_phishing`, `feedback`, `release_request_created`,
 `release_request_approved`, `release_request_denied`.
 
-The table is append-only — no route updates or deletes an audit row. Reads are
-restricted to analyst/admin.
+The table is append-only **at the application level** — the API exposes no route
+that updates or deletes an audit row, and none of the ORM models offers one.
+Reads are restricted to analyst/admin. This is deliberately *not* described as an
+immutable log: a database administrator with direct SQL access can still alter
+the table, and making that impossible would need append-only storage or an
+external write-once sink, neither of which this MVP has. The claim made is the
+one the code actually supports.
 
 Tested by `test_requests_audit.py::test_actions_are_audited` and
 `test_release_workflow.py::test_approval_records_an_analyst_review_and_audit_entry`.
+
+**The trail is also kept truthful at the source.** An audit log that faithfully
+records actions the workflow should never have accepted is not accountability. A
+refused transition therefore writes nothing at all — no status change, no
+`analyst_reviews` row and no audit entry — which
+`test_transitions.py::test_a_refused_transition_writes_no_review_and_no_audit_entry`
+asserts by comparing both counts either side of a rejected call. See BUG-17.
 
 ---
 

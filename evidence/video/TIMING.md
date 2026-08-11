@@ -12,7 +12,7 @@ Captured from the running application by `evidence/record_walkthrough.py`.
 | 1:15 | Segment 3: analyst dashboard |
 | 1:25 | Segment 3: risk-sorted inbox |
 | 1:35 | Segment 3: explainable score on the worst message |
-| 1:50 | Segment 3: staff sees only their own mail, and requests a release |
+| 1:51 | Segment 3: staff sees only their own mail, and requests a release |
 | 2:20 | Segment 4: duplicate request refused (the defect that was fixed) |
 | 2:26 | Segment 4: analyst decides the request |
 | 2:42 | Segment 4: the approval released the email in one transaction |

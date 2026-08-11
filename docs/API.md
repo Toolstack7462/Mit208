@@ -28,7 +28,7 @@ schema, not written by hand. The live interactive version is at
 | POST | `/api/emails/{email_id}/confirm-phishing` | Auth | analyst, admin | Confirm as phishing |
 | POST | `/api/emails/{email_id}/feedback` | Auth | analyst, admin | Record analyst feedback |
 | GET | `/api/release-requests` | Auth | any | List requests (staff see only their own) |
-| POST | `/api/release-requests` | Auth | staff, analyst, admin | Request release of a held email |
+| POST | `/api/release-requests` | Auth | **staff only** | Request release of a held email addressed to the caller |
 | POST | `/api/release-requests/{request_id}/decision` | Auth | analyst, admin | Approve or deny |
 | GET | `/api/audit-logs` | Auth | analyst, admin | Read the audit trail |
 | GET | `/api/dashboard/stats` | Auth | any | Aggregate statistics (role-scoped) |
@@ -131,10 +131,36 @@ except `feedback` which is required for the feedback endpoint).
 | 403 | Caller is `staff` |
 | 404 | No such email |
 | 409 | The email is **already** in the target status — nothing changed, so no review or audit row is written |
+| 409 | The action is not valid from the email's current status (see the table below); the message names the states it *is* valid from |
 | 422 | `feedback` missing/blank on the feedback endpoint, or a field is over-long |
 
 Each successful action writes one `analyst_reviews` row **and** one `audit_logs`
-row.
+row. A refused action writes **neither**, and does not change the status.
+
+#### Valid transitions
+
+The server accepts an action only from the states in which it is meaningful.
+The rules live in `backend/app/transitions.py`.
+
+| Action | Valid from | Moves to |
+|---|---|---|
+| `quarantine` | `inbox`, `released`, `safe` | `quarantined` |
+| `release` | `quarantined`, `confirmed_phishing` | `released` |
+| `confirm-phishing` | any status except `confirmed_phishing` | `confirmed_phishing` |
+| `feedback` | any status | *(no change)* |
+
+`quarantine` is not valid from `confirmed_phishing`, because that would replace a
+stronger verdict with a weaker one. Example refusal:
+
+```json
+{
+  "error": {
+    "code": 409,
+    "message": "Cannot 'release' an email with status 'inbox'. This action applies only to email in: quarantined, confirmed_phishing.",
+    "request_id": "…"
+  }
+}
+```
 
 ---
 
@@ -146,10 +172,16 @@ row.
 { "email_id": 1, "reason": "I was expecting this invoice from our vendor." }
 ```
 
+**Staff only.** Raising a request is the recipient's action. An analyst can
+release an email directly, so there is no workflow in which they need to ask for
+one; allowing it also let a request be filed in a recipient's name. Analysts and
+admins keep full read access to the queue and remain the only roles that can
+*decide* a request.
+
 | Status | When |
 |---|---|
 | 201 | Created with `status: "pending"` |
-| 403 | Staff attempting to request release of someone else's email |
+| 403 | Caller is not `staff`, **or** the email is not addressed to the caller |
 | 404 | No such email |
 | 409 | The email is not held (`quarantined`/`confirmed_phishing`), **or** the caller already has a pending request for it |
 | 422 | `reason` shorter than 10 characters (after trimming) or longer than 2000 |
@@ -168,6 +200,7 @@ row.
 | 403 | Caller is `staff` |
 | 404 | No such request |
 | 409 | Already decided |
+| 409 | `approved`, but the email is no longer in a releasable state — for example an analyst released or delivered it while the request sat in the queue. The request stays `pending`. Denial is still permitted, because it changes no email status |
 | 422 | `status` is not one of the two permitted values |
 
 ---

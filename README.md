@@ -21,10 +21,10 @@ real email data is used.
 | Interactive API documentation | http://localhost:8000/docs |
 | Database | PostgreSQL `phishguard_db` (SQLite fallback available) |
 
-**Verified status:** 118 backend tests pass on **both SQLite and PostgreSQL 16.6**,
-69 frontend tests pass, and 20 live end-to-end API checks pass against a running
-server on **each** engine; backend statement coverage is 89% (823/924).
-Screenshots and a 4-minute walkthrough were captured from the running
+**Verified status (11 August 2026):** 170 backend tests pass on **both SQLite and
+PostgreSQL 16.6**, 92 frontend tests pass, and 22 live end-to-end API checks pass
+against a running server; backend statement coverage is 90% (847/943).
+Twenty-two screenshots and a 4-minute walkthrough were captured from the running
 application. See [`docs/TESTING.md`](docs/TESTING.md) for the commands and
 captured output.
 
@@ -68,7 +68,7 @@ own held mail and request release), and administrators (full oversight).
 | [`docs/API.md`](docs/API.md) | All 19 endpoints with request/response examples and status codes |
 | [`docs/TESTING.md`](docs/TESTING.md) | Test strategy, documented test cases, verified results, coverage |
 | [`docs/SECURITY.md`](docs/SECURITY.md) | Security controls with the test proving each, plus known limitations |
-| [`docs/BUG_LOG.md`](docs/BUG_LOG.md) | 16 defects found, investigated and fixed, each with a regression test |
+| [`docs/BUG_LOG.md`](docs/BUG_LOG.md) | 18 defects found, investigated and fixed, each with a regression test |
 | [`docs/SUBMISSION_CHECKLIST.md`](docs/SUBMISSION_CHECKLIST.md) | What is done, what is still manual, and how to verify each item |
 | [`evidence/README.md`](evidence/README.md) | How the screenshots and walkthrough recording were produced |
 
@@ -152,8 +152,8 @@ Mit208/
 │   │   ├── seed.py         # Demo users and sample-email seeder
 │   │   ├── ratelimit.py    # Per-IP failed-login limiter
 │   │   └── routers/        # auth, emails, requests, audit, dashboard
-│   ├── tests/              # 118 pytest tests (8 files), run on SQLite + PostgreSQL
-│   ├── smoke_test.py       # 20 live end-to-end API checks
+│   ├── tests/              # 170 pytest tests (9 files), run on SQLite + PostgreSQL
+│   ├── smoke_test.py       # 22 live end-to-end API checks
 │   ├── requirements.txt
 │   ├── requirements-dev.txt
 │   └── .env.example
@@ -162,13 +162,13 @@ Mit208/
 │       ├── pages/          # Login, Dashboard, Inbox, StaffPortal, ReleaseRequests, AuditLogs
 │       ├── components/     # Sidebar, Layout, RiskBadge, EmailDetailPanel, charts, StateBlock
 │       ├── context/        # Authentication context
-│       ├── lib/            # risk.js (level mapping), errors.js (API error mapping)
+│       ├── lib/            # risk.js, errors.js, transitions.js (email state machine)
 │       ├── test/           # Vitest setup
-│       └── **/*.test.jsx   # 69 vitest tests (9 files)
+│       └── **/*.test.jsx   # 92 vitest tests (11 files)
 ├── database/               # schema.sql, seed_data.sql, sample_emails.json
 ├── docs/                   # ARCHITECTURE, ERD, API, TESTING, SECURITY, BUG_LOG,
 │                           #   SUBMISSION_CHECKLIST
-├── evidence/               # capture/recording scripts, 17 screenshots, MP4 walkthrough
+├── evidence/               # capture/recording scripts, 22 screenshots, MP4 walkthrough
 ├── .github/workflows/      # ci.yml — backend matrix, PostgreSQL job, frontend build
 └── README.md
 ```
@@ -255,9 +255,12 @@ zero-install fallback for quick local testing.
 createdb phishguard_db
 #    (or in psql:  CREATE DATABASE phishguard_db;)
 
-# 2. In backend/.env set:
-DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/phishguard_db
+# 2. In backend/.env set (substitute your own role and password):
+DATABASE_URL=postgresql+psycopg2://YOUR_DB_USER:YOUR_DB_PASSWORD@localhost:5432/phishguard_db
 ```
+
+`backend/.env` is listed in `.gitignore` and is never committed; only
+`backend/.env.example` is tracked. `evidence/secret_scan.py` checks that.
 
 The backend creates the tables automatically on startup. The reference DDL and a
 pure-SQL seed can also be applied directly:
@@ -397,24 +400,24 @@ A full written reference — all 19 endpoints with request/response examples, st
 codes and the error format — is in [`docs/API.md`](docs/API.md).
 
 An end-to-end check of the workflow is available in `backend/smoke_test.py` and
-can be run while the backend is active (20 checks).
+can be run while the backend is active (22 checks).
 
 ---
 
 ## Testing
 
-Three complementary layers. Full detail, 55 documented test cases and captured
+Three complementary layers. Full detail, 66 documented test cases and captured
 output are in [`docs/TESTING.md`](docs/TESTING.md).
 
 | Layer | Location | Coverage |
 |---|---|---|
-| Backend unit + API (pytest) | `backend/tests/` | **118 tests**, run on SQLite **and** PostgreSQL — rule engine, JWT auth, RBAC, email actions, release workflow, validation, security controls, database integrity, concurrency, dashboard, audit |
-| Frontend unit + component (vitest) | `frontend/src/**/*.test.{js,jsx}` | **69 tests** — error mapping, risk helpers, route/role guards, login flow, error & empty states, release-request validation, notification tone |
-| Live end-to-end | `backend/smoke_test.py` | **20 checks** against a real running server and database |
+| Backend unit + API (pytest) | `backend/tests/` | **170 tests**, run on SQLite **and** PostgreSQL — rule engine, JWT auth, RBAC, email actions, the workflow state machine, release workflow, validation, security controls, database integrity, concurrency, dashboard, audit |
+| Frontend unit + component (vitest) | `frontend/src/**/*.test.{js,jsx}` | **92 tests** — error mapping, risk helpers, route/role guards, login flow, error & empty states, release-request validation, action-button availability, notification tone |
+| Live end-to-end | `backend/smoke_test.py` | **22 checks** against a real running server and database |
 
-**Verified results (5 August 2026):** 118 passed on SQLite · 118 passed on
-PostgreSQL 16.6 · 69 frontend passed · 20/20 live checks passed on each engine.
-Backend statement coverage **89%** (823/924).
+**Verified results (11 August 2026):** 170 passed on SQLite · 170 passed on
+PostgreSQL 16.6 · 92 frontend passed · 22/22 live checks passed against the
+PostgreSQL-backed server. Backend statement coverage **90%** (847/943).
 
 The pytest suite runs against an **isolated in-memory SQLite database** (it never
 touches `phishguard.db`), so it is safe to run at any time and requires no server:
@@ -423,24 +426,24 @@ touches `phishguard.db`), so it is safe to run at any time and requires no serve
 # Backend
 cd backend
 pip install -r requirements-dev.txt
-python -m pytest                                       # 118 passed (SQLite)
+python -m pytest                                       # 170 passed (SQLite)
 
 # The same suite against PostgreSQL, the assessed target:
 #   createdb phishguard_test
 #   set TEST_DATABASE_URL=postgresql+psycopg2://USER:PASS@localhost:5432/phishguard_test
-python -m pytest                                       # 118 passed (PostgreSQL)
+python -m pytest                                       # 170 passed (PostgreSQL)
 python -m pytest --cov=app --cov-report=term-missing   # with coverage
 
 # Frontend
 cd ../frontend
 npm install
-npm test                                               # 69 passed
+npm test                                               # 92 passed
 
 # Live end-to-end (needs the server running and the database seeded)
 cd ../backend
 python -m app.seed --reset
 uvicorn app.main:app --port 8000     # terminal 1
-python smoke_test.py                 # terminal 2 -> ALL 20/20 CHECKS PASSED
+python smoke_test.py                 # terminal 2 -> ALL 22/22 CHECKS PASSED
 ```
 
 ### Continuous integration
@@ -452,7 +455,7 @@ request to `main`:
 |---|---|
 | `backend` | Installs and runs the suite + coverage on Python 3.11, 3.12 and 3.13 |
 | `backend-postgres` | Applies `database/schema.sql` to a real PostgreSQL 16 service with `ON_ERROR_STOP`, seeds into it, asserts the database rejects five kinds of invalid write, runs the **whole test suite** against PostgreSQL, and checks the ORM emits the same constraints |
-| `frontend` | `npm ci`, the 69-test vitest suite, and a production `vite build` |
+| `frontend` | `npm ci`, the 92-test vitest suite, and a production `vite build` |
 
 ---
 
@@ -460,7 +463,7 @@ request to `main`:
 
 All images are captures of the running application, taken with Playwright and
 Chromium at 3200 x 2000 by [`evidence/capture_screenshots.py`](evidence/capture_screenshots.py).
-The full set of 17, with a description of each, is in
+The full set of 22, with a description of each, is in
 [`evidence/screenshots/INDEX.md`](evidence/screenshots/INDEX.md). Re-run the
 script after any interface change so the evidence cannot go stale.
 
@@ -486,6 +489,13 @@ a refused short justification, and the dashboard when the API cannot be reached:
 | Duplicate refused | Backend unreachable |
 |---|---|
 | ![Duplicate refused](evidence/screenshots/12-duplicate-request-blocked.png) | ![API unreachable](evidence/screenshots/16-error-state-api-unreachable.png) |
+
+So is the workflow state machine — the interface offers only the transitions the
+API will accept, so an invalid action cannot be started at all:
+
+| Release unavailable on delivered email | Request unavailable to the recipient |
+|---|---|
+| ![Invalid transition blocked](evidence/screenshots/18-invalid-transition-blocked.png) | ![Request not applicable](evidence/screenshots/19-release-request-not-applicable.png) |
 
 ---
 

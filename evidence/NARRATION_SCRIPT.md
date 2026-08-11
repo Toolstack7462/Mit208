@@ -116,6 +116,14 @@ your route through the application.
 > writes both a review row and an audit row in a single transaction. If any part
 > failed, the session rolls back and none of it is written.
 >
+> The larger fix came from asking what each action actually means. The API had no
+> rule about which state an action could start from, so I could release an email
+> that had never been quarantined — and it recorded that as a real analyst
+> decision in the audit log. The valid transitions now live in one module the
+> whole backend imports, the interface reads the same table so it never offers an
+> action the server would refuse, and a test compares the two files so they cannot
+> drift apart.
+>
 > On libraries: bcrypt for password hashing, PyJWT for tokens, and Pydantic for
 > validation at the API boundary. That last one matters more than it sounds — my
 > subject column is VARCHAR 500, and SQLite silently accepted longer values while
@@ -145,10 +153,11 @@ your route through the application.
 > dashboard would sit on 'Loading' forever. Now there's an explicit message, a
 > retry button, and a reference ID that matches the server log line.
 >
-> On testing: 110 backend tests with 89 per cent statement coverage, 66 frontend
-> tests, and a 20-check script that drives a real running server end to end. All
-> of it runs in GitHub Actions on three Python versions and against a real
-> PostgreSQL container.
+> On testing: 170 backend tests with 90 per cent statement coverage, 92 frontend
+> tests, and a 22-check script that drives a real running server end to end. The
+> backend suite runs on SQLite and on PostgreSQL 16.6 and passes identically on
+> both. All of it runs in GitHub Actions on three Python versions and against a
+> real PostgreSQL container.
 >
 > Honest limitations: the detection is heuristic and will produce false positives
 > and false negatives, which is exactly why a human reviews it. The SPF, DKIM and

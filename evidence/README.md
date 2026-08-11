@@ -13,17 +13,27 @@ Re-run the scripts after any interface change and the evidence updates itself.
 
 | Path | What it is |
 |---|---|
-| `capture_screenshots.py` | Drives Chromium through the full workflow and writes 19 labelled screenshots |
-| `screenshots/` | The 22 PNGs (19 workflow + 3 PostgreSQL), at 3200 x 2000 |
+| `capture_screenshots.py` | Drives Chromium through the full workflow and writes 19 labelled screenshots, recording which database engine served them |
+| `capture_postgres_evidence.py` | Three captures proving the app runs on PostgreSQL; refuses to run on any other engine |
+| `capture_ci_evidence.py` | The passing CI run and the release tag, plus `ci_evidence.json` for the report; refuses to run unless CI passed |
+| `screenshots/` | The 24 PNGs (19 workflow + 3 PostgreSQL + 2 CI/release), at 3200 x 2000 |
 | `screenshots/INDEX.md` | Generated table describing every image |
+| `index_section.py` | Lets the capture scripts each own one section of that index without clobbering the others |
+| `secret_scan.py` | Scans every tracked file for committed credentials; also a CI job |
+| `make_architecture_figure.py` | The layered architecture drawing, in report and projector variants |
+| `make_erd_figure.py` | The data-model figure |
+| `make_workflow_figure.py` | The four-pane core-workflow figure, laid out for legibility at print size |
+| `figures/` | The four generated figures used by the report and the deck |
 | `record_walkthrough.py` | Records a 4-minute screen capture of the same workflow |
 | `convert_video.py` | Converts the recording to H.264 MP4 |
 | `video/PhishGuard_Walkthrough.mp4` | The walkthrough, 4:00, 1280x720, **silent** |
 | `video/PhishGuard_Walkthrough_raw.webm` | The original Playwright recording (VP8) |
 | `video/TIMING.md` | Generated timeline of what appears when |
 | `NARRATION_SCRIPT.md` | Draft narration and shot list for the student to record |
-| `update_report.py`, `trim_report.py`, `trim_report2.py` | Edit the report DOCX in place: correct figures, then fit the word allocation |
-| `update_pptx.py` | Edits the presentation in place: figures, screenshots, speaker notes |
+| `update_report.py`, `trim_report.py`, `trim_report2.py` | Earlier passes over the report DOCX: correct figures, then fit the word allocation |
+| `finalise_report.py` | The final pass: removes placeholders, adds the figures and appendices, fixes pagination, reports the body word count |
+| `update_pptx.py`, `finalise_pptx.py` | Edit the presentation in place: figures, screenshots, speaker notes. Every substitution is checked, so a stale figure cannot survive silently |
+| `to_pdf.ps1` | Renders the DOCX and PPTX to PDF with Word and PowerPoint, so the pagination matches what the author saw |
 
 ---
 

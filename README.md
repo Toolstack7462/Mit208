@@ -70,6 +70,7 @@ own held mail and request release), and administrators (full oversight).
 | [`docs/SECURITY.md`](docs/SECURITY.md) | Security controls with the test proving each, plus known limitations |
 | [`docs/BUG_LOG.md`](docs/BUG_LOG.md) | 18 defects found, investigated and fixed, each with a regression test |
 | [`docs/SUBMISSION_CHECKLIST.md`](docs/SUBMISSION_CHECKLIST.md) | What is done, what is still manual, and how to verify each item |
+| [`docs/DEMO.md`](docs/DEMO.md) | Exact startup and database-reset commands, demo accounts, the route through the app, and the offline fallback |
 | [`evidence/README.md`](evidence/README.md) | How the screenshots and walkthrough recording were produced |
 
 ---

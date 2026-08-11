@@ -32,6 +32,8 @@ import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 import docx
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
@@ -1081,6 +1083,11 @@ def main() -> int:
     hidden = scrub_hidden(doc)
 
     doc.save(str(dst))
+
+    # Parts Word attaches on the side, which python-docx cannot drop before saving.
+    from strip_package_parts import strip as strip_parts
+    for part in strip_parts(dst):
+        hidden.append(f"package part removed: {part}")
 
     print(f"Report written: {dst}")
     for line in hidden:

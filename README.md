@@ -21,12 +21,15 @@ real email data is used.
 | Interactive API documentation | http://localhost:8000/docs |
 | Database | PostgreSQL `phishguard_db` (SQLite fallback available) |
 
-**Verified status (11 August 2026):** 170 backend tests pass on **both SQLite and
+**Assessed version:** [`v1.3-final`](https://github.com/Toolstack7462/Mit208/releases/tag/v1.3-final).
+Earlier `*-final` tags mark intermediate states and were left where they point
+rather than moved.
+
+**Verified status (12 August 2026):** 170 backend tests pass on **both SQLite and
 PostgreSQL 16.6**, 92 frontend tests pass, and 22 live end-to-end API checks pass
-against a running server; backend statement coverage is 90% (847/943).
-Twenty-two screenshots and a 4-minute walkthrough were captured from the running
-application. See [`docs/TESTING.md`](docs/TESTING.md) for the commands and
-captured output.
+against a running server; backend statement coverage is 90% (847/943). Twenty-four
+screenshots and a 4-minute walkthrough were captured from the running application.
+See [`docs/TESTING.md`](docs/TESTING.md) for the commands and captured output.
 
 ---
 
@@ -52,7 +55,10 @@ PhishGuard addresses the gap between those two extremes:
 - **The decision is a security decision, made by a security person.** Only an
   analyst or admin can release mail.
 - **Everything is recorded.** Every login, classification, action and decision is
-  written to an append-only audit log with actor, entity, detail and IP address.
+  written to an audit log with actor, entity, detail and IP address. The log is
+  append-only at the application level: no route updates or deletes a row. It is
+  not immutable storage — a database administrator with direct SQL access could
+  still change the table. See [`docs/SECURITY.md`](docs/SECURITY.md).
 
 **Target users:** security analysts (triage and decide), general staff (see their
 own held mail and request release), and administrators (full oversight).
@@ -103,8 +109,9 @@ own held mail and request release), and administrators (full oversight).
 - Database-level integrity: `CHECK` constraints on every enumerated column, a
   bounded `risk_score`, and a partial unique index making "one open release
   request per user per email" atomic rather than merely checked in the API.
-- Defensive parsing of stored data, so one corrupt row cannot make a record
-  unreadable, and per-request rollback so a failed action writes nothing.
+- Defensive parsing of stored data, so a corrupt `score_reasons` value no longer
+  makes the whole record unreadable (BUG-09), and per-request rollback so a failed
+  action writes nothing.
 
 ### Not implemented (stated deliberately)
 
@@ -168,9 +175,10 @@ Mit208/
 │       └── **/*.test.jsx   # 92 vitest tests (11 files)
 ├── database/               # schema.sql, seed_data.sql, sample_emails.json
 ├── docs/                   # ARCHITECTURE, ERD, API, TESTING, SECURITY, BUG_LOG,
-│                           #   SUBMISSION_CHECKLIST
-├── evidence/               # capture/recording scripts, 22 screenshots, MP4 walkthrough
-├── .github/workflows/      # ci.yml — backend matrix, PostgreSQL job, frontend build
+│                           #   SUBMISSION_CHECKLIST, DEMO
+├── evidence/               # capture/recording scripts, 24 screenshots, MP4 walkthrough
+├── .github/workflows/      # ci.yml — backend matrix, PostgreSQL job, secret scan,
+│                           #   frontend build
 └── README.md
 ```
 
@@ -199,10 +207,13 @@ Mit208/
 | PostgreSQL | 14+ | Recommended. If absent, the backend falls back to a local SQLite file and still runs |
 
 Dependencies are pinned with the compatible-release operator (`~=`) rather than
-exact `==` pins. This is deliberate: exact pins to older patch releases could not
-be installed on Python 3.13+ because `pydantic-core` and `psycopg2` publish
-binary wheels only for the interpreters available at that patch's release. See
-[`docs/BUG_LOG.md`](docs/BUG_LOG.md) BUG-01.
+exact `==` pins. This is deliberate: the earlier exact pins would not install on
+Python 3.13+, because `pydantic-core` and `psycopg2` publish binary wheels only for
+the interpreters that existed when that patch was released. `~=` keeps the same
+minor version but allows a newer patch that does ship a matching wheel. See
+[`docs/BUG_LOG.md`](docs/BUG_LOG.md) BUG-01. The CI matrix installs the pinned
+requirements on Python 3.11, 3.12 and 3.13 on every push, so a regression of that
+kind would show up there rather than on a marker's machine.
 
 ```bash
 git clone https://github.com/Toolstack7462/Mit208.git
@@ -429,9 +440,11 @@ cd backend
 pip install -r requirements-dev.txt
 python -m pytest                                       # 170 passed (SQLite)
 
-# The same suite against PostgreSQL, the assessed target:
+# The same suite against PostgreSQL, the assessed target. Create the database,
+# point TEST_DATABASE_URL at it, then run the suite again:
 #   createdb phishguard_test
-#   set TEST_DATABASE_URL=postgresql+psycopg2://USER:PASS@localhost:5432/phishguard_test
+#   PowerShell:      $env:TEST_DATABASE_URL="postgresql+psycopg2://USER:PASSWORD@localhost:5432/phishguard_test"
+#   macOS / Linux:   export TEST_DATABASE_URL=postgresql+psycopg2://USER:PASSWORD@localhost:5432/phishguard_test
 python -m pytest                                       # 170 passed (PostgreSQL)
 python -m pytest --cov=app --cov-report=term-missing   # with coverage
 
@@ -464,9 +477,9 @@ request to `main`:
 
 All images are captures of the running application, taken with Playwright and
 Chromium at 3200 x 2000 by [`evidence/capture_screenshots.py`](evidence/capture_screenshots.py).
-The full set of 22, with a description of each, is in
-[`evidence/screenshots/INDEX.md`](evidence/screenshots/INDEX.md). Re-run the
-script after any interface change so the evidence cannot go stale.
+The full set of 24, with a description of each, is in
+[`evidence/screenshots/INDEX.md`](evidence/screenshots/INDEX.md). I re-run the
+script after an interface change so the screenshots stay in step with the code.
 
 | Login | Analyst dashboard |
 |-------|-----------|
@@ -491,8 +504,9 @@ a refused short justification, and the dashboard when the API cannot be reached:
 |---|---|
 | ![Duplicate refused](evidence/screenshots/12-duplicate-request-blocked.png) | ![API unreachable](evidence/screenshots/16-error-state-api-unreachable.png) |
 
-So is the workflow state machine — the interface offers only the transitions the
-API will accept, so an invalid action cannot be started at all:
+So is the workflow state machine. The interface offers only the transitions the
+API accepts, so an invalid action is not offered in the first place; if one is sent
+directly to the API anyway, it is refused with a 409:
 
 | Release unavailable on delivered email | Request unavailable to the recipient |
 |---|---|
@@ -511,21 +525,6 @@ five segments the assessment brief asks for. The on-screen timeline is in
 The audio track is intentionally empty: the narration script and shot list are in
 [`evidence/NARRATION_SCRIPT.md`](evidence/NARRATION_SCRIPT.md) so the narration is
 recorded in the author's own voice rather than synthesised.
-
--------|-----------|
-| ![Login](screenshots/login.png) | ![Dashboard](screenshots/dashboard.png) |
-
-| Email Inbox | Email Detail |
-|-------------|--------------|
-| ![Email inbox](screenshots/email-inbox.png) | ![Email detail](screenshots/email-detail.png) |
-
-| Staff Portal | Release Requests |
-|--------------|------------------|
-| ![Staff portal](screenshots/staff-portal.png) | ![Release requests](screenshots/release-requests.png) |
-
-| Audit Logs | API Documentation |
-|------------|-------------------|
-| ![Audit logs](screenshots/audit-logs.png) | ![FastAPI docs](screenshots/fastapi-docs.png) |
 
 ---
 
@@ -596,24 +595,20 @@ is in [`docs/SECURITY.md`](docs/SECURITY.md#8-known-limitations).
 
 ## AI-Use Note
 
-Generative AI (Claude) was used during this project as a review and debugging
-aid. Specifically, it was used to:
+Generative AI (Claude) supported this project in three ways: reviewing the
+prototype against the assessment criteria, helping debug problems such as why the
+pinned dependencies would not install on newer Python releases, and suggesting
+extra test cases, mostly negative and boundary ones.
 
-- review the working prototype against the assessment criteria and identify
-  weaknesses in validation, error handling and dependency configuration;
-- explain why the pinned dependency versions failed to install on newer Python
-  releases, and suggest the compatible-release approach;
-- suggest additional test cases, particularly negative and boundary cases.
+I reviewed and tested every suggestion before adopting it, and I remain
+responsible for the code, the security decisions and the results reported here.
+Each defect in [`docs/BUG_LOG.md`](docs/BUG_LOG.md) was reproduced with a probe
+test first, then fixed, then locked in with a named regression test. The figures in
+that file and in [`docs/TESTING.md`](docs/TESTING.md) are recorded command output
+from this repository, not generated text. Suggestions I decided against are listed
+in the "investigated and deliberately not changed" table at the end of the bug log.
 
-Every suggestion was reproduced, reviewed and tested before being kept. Each
-defect in [`docs/BUG_LOG.md`](docs/BUG_LOG.md) was **reproduced first** with a
-probe test, then fixed, then locked in with a named regression test — the
-recorded output in that file and in [`docs/TESTING.md`](docs/TESTING.md) is real
-output from this repository, not generated text. Suggestions that did not fit the
-project were rejected and are listed in the "investigated and deliberately not
-changed" table at the end of the bug log.
-
-The full AI-use declaration required by the assessment is in the final report.
+The full declaration required by the assessment is in the final report.
 
 ---
 

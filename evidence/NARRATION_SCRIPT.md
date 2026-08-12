@@ -152,9 +152,11 @@ your route through the application.
 > And this is what happens when the backend can't be reached. It used to render
 > 'No audit entries', which looks identical to a genuinely empty log, and the
 > dashboard would sit on 'Loading' forever. Now there's an explicit message, a
-> retry button, and a reference ID that matches the server log line.
+> retry button. When the API does answer with an error, the envelope carries a
+> request id and the screen shows it so the failure can be found in the server log —
+> but there is no server response here to carry one, so none is shown.
 >
-> On testing: 170 backend tests with 90 per cent statement coverage, 92 frontend
+> On testing: 175 backend tests with 90 per cent statement coverage, 92 frontend
 > tests, and a 22-check script that drives a real running server end to end. The
 > backend suite runs on SQLite and on PostgreSQL 16.6 and passes identically on
 > both. All of it runs in GitHub Actions on three Python versions and against a
@@ -167,7 +169,7 @@ your route through the application.
 > wired in. There's no live mail ingestion and no HTTPS in this local demo.
 >
 > The code, the setup instructions and this evidence are all in the repository,
-> tagged v1.4-final. Thanks for watching."
+> tagged v1.5-final. Thanks for watching."
 
 ---
 
@@ -189,7 +191,7 @@ your route through the application.
 | 12 | 2:42 | `/inbox` | Message now released |
 | 13 | 3:10 | `/audit` | Actor, action, entity, detail, IP; scroll |
 | 14 | 3:24 | `/audit` as staff | Redirected to dashboard |
-| 15 | 3:34 | `/dashboard`, API blocked | Error state with retry and reference ID |
+| 15 | 3:34 | `/dashboard`, API blocked | Error state with an explicit message and retry (no request id: the server never answered) |
 
 **Recording notes**
 

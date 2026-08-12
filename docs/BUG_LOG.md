@@ -674,8 +674,8 @@ now accepts either, and is exercised with both drivers' exact wording.
 `test_pending_request_conflict_is_recognised_on_both_engines` (parameterised over
 both drivers' wording plus three failures that must *not* match).
 
-Confirmed by running the full suite on both engines: **170 passed on PostgreSQL
-16.6 and 170 passed on SQLite** (re-run 11 August 2026).
+Confirmed by running the full suite on both engines: **175 passed on PostgreSQL
+16.6 and 175 passed on SQLite** (re-run 12 August 2026).
 
 ---
 

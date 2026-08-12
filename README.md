@@ -21,14 +21,15 @@ real email data is used.
 | Interactive API documentation | http://localhost:8000/docs |
 | Database | PostgreSQL `phishguard_db` (SQLite fallback available) |
 
-**Assessed version:** [`v1.4-final`](https://github.com/Toolstack7462/Mit208/releases/tag/v1.4-final).
+**Assessed version:** [`v1.5-final`](https://github.com/Toolstack7462/Mit208/releases/tag/v1.5-final).
 Earlier `*-final` tags mark intermediate states and were left where they point
 rather than moved.
 
-**Verified status (12 August 2026):** 170 backend tests pass on **both SQLite and
+**Verified status (12 August 2026):** 175 backend tests pass on **both SQLite and
 PostgreSQL 16.6**, 92 frontend tests pass, and 22 live end-to-end API checks pass
-against a running server; backend statement coverage is 90% (847/943). Twenty-four
-screenshots and a 4-minute walkthrough were captured from the running application.
+against a running server; backend statement coverage is 90% (861/953). Twenty-three
+screenshots and a 4-minute walkthrough were captured from the running application,
+and two more record the passing CI run and the published release.
 See [`docs/TESTING.md`](docs/TESTING.md) for the commands and captured output.
 
 ---
@@ -44,17 +45,18 @@ Neither leaves any record of who decided what.
 PhishGuard addresses the gap between those two extremes:
 
 - **Suspicious mail is held, not deleted.** Messages scoring high or critical are
-  quarantined automatically, so nothing dangerous is delivered and nothing
-  legitimate is lost.
+  quarantined automatically, so a message the rules flag is withheld rather than
+  delivered or destroyed.
 - **Every score is explainable.** The rule engine returns a plain-language reason
   for each point it adds, so an analyst can judge the finding instead of
   trusting an opaque number.
 - **The recipient has a route back.** Staff can see that a message is held and
   request its release with a written justification, rather than emailing IT and
   waiting.
-- **The decision is a security decision, made by a security person.** Only an
-  analyst or admin can release mail.
-- **Everything is recorded.** Every login, classification, action and decision is
+- **Only analysts and administrators can approve or deny a release request.**
+  A recipient can ask; they cannot release their own mail.
+- **Material actions are recorded.** Every login, classification, analyst action
+  and release decision is
   written to an audit log with actor, entity, detail and IP address. The log is
   append-only at the application level: no route updates or deletes a row. It is
   not immutable storage — a database administrator with direct SQL access could
@@ -160,7 +162,7 @@ Mit208/
 │   │   ├── seed.py         # Demo users and sample-email seeder
 │   │   ├── ratelimit.py    # Per-IP failed-login limiter
 │   │   └── routers/        # auth, emails, requests, audit, dashboard
-│   ├── tests/              # 170 pytest tests (9 files), run on SQLite + PostgreSQL
+│   ├── tests/              # 175 pytest tests (9 files), run on SQLite + PostgreSQL
 │   ├── smoke_test.py       # 22 live end-to-end API checks
 │   ├── requirements.txt
 │   ├── requirements-dev.txt
@@ -176,7 +178,7 @@ Mit208/
 ├── database/               # schema.sql, seed_data.sql, sample_emails.json
 ├── docs/                   # ARCHITECTURE, ERD, API, TESTING, SECURITY, BUG_LOG,
 │                           #   SUBMISSION_CHECKLIST, DEMO
-├── evidence/               # capture/recording scripts, 24 screenshots, MP4 walkthrough
+├── evidence/               # capture/recording scripts, 25 screenshots, MP4 walkthrough
 ├── .github/workflows/      # ci.yml — backend matrix, PostgreSQL job, secret scan,
 │                           #   frontend build
 └── README.md
@@ -189,7 +191,7 @@ Mit208/
 | Table | Purpose |
 |-------|---------|
 | `users` | Accounts with role and bcrypt password hash |
-| `email_records` | Ingested emails with risk score/level, reasons, SPF/DKIM/DMARC, AI flag and status |
+| `email_records` | Ingested emails with risk score/level, reasons, SPF/DKIM/DMARC, templated-language flag and status |
 | `analyst_reviews` | Analyst actions: quarantine, release, confirm_phishing, feedback |
 | `staff_release_requests` | Staff requests to release held email and the analyst decision |
 | `audit_logs` | Record of every action (actor, entity, details, IP, timestamp) |
@@ -423,13 +425,13 @@ output are in [`docs/TESTING.md`](docs/TESTING.md).
 
 | Layer | Location | Coverage |
 |---|---|---|
-| Backend unit + API (pytest) | `backend/tests/` | **170 tests**, run on SQLite **and** PostgreSQL — rule engine, JWT auth, RBAC, email actions, the workflow state machine, release workflow, validation, security controls, database integrity, concurrency, dashboard, audit |
+| Backend unit + API (pytest) | `backend/tests/` | **175 tests**, run on SQLite **and** PostgreSQL — rule engine, JWT auth, RBAC, email actions, the workflow state machine, release workflow, validation, security controls, database integrity, concurrency, dashboard, audit |
 | Frontend unit + component (vitest) | `frontend/src/**/*.test.{js,jsx}` | **92 tests** — error mapping, risk helpers, route/role guards, login flow, error & empty states, release-request validation, action-button availability, notification tone |
 | Live end-to-end | `backend/smoke_test.py` | **22 checks** against a real running server and database |
 
-**Verified results (11 August 2026):** 170 passed on SQLite · 170 passed on
+**Verified results (12 August 2026):** 175 passed on SQLite · 175 passed on
 PostgreSQL 16.6 · 92 frontend passed · 22/22 live checks passed against the
-PostgreSQL-backed server. Backend statement coverage **90%** (847/943).
+PostgreSQL-backed server. Backend statement coverage **90%** (861/953).
 
 The pytest suite runs against an **isolated in-memory SQLite database** (it never
 touches `phishguard.db`), so it is safe to run at any time and requires no server:
@@ -438,19 +440,20 @@ touches `phishguard.db`), so it is safe to run at any time and requires no serve
 # Backend
 cd backend
 pip install -r requirements-dev.txt
-python -m pytest                                       # 170 passed (SQLite)
+python -m pytest                                       # 175 passed (SQLite)
 
 # The same suite against PostgreSQL, the assessed target. Create the database,
 # point TEST_DATABASE_URL at it, then run the suite again:
 #   createdb phishguard_test
 #   PowerShell:      $env:TEST_DATABASE_URL="postgresql+psycopg2://USER:PASSWORD@localhost:5432/phishguard_test"
 #   macOS / Linux:   export TEST_DATABASE_URL=postgresql+psycopg2://USER:PASSWORD@localhost:5432/phishguard_test
-python -m pytest                                       # 170 passed (PostgreSQL)
+python -m pytest                                       # 175 passed (PostgreSQL)
 python -m pytest --cov=app --cov-report=term-missing   # with coverage
 
-# Frontend
+# Frontend — npm ci installs exactly the locked versions, which is what makes a
+# verification run reproducible. Use npm install only when adding a dependency.
 cd ../frontend
-npm install
+npm ci
 npm test                                               # 92 passed
 
 # Live end-to-end (needs the server running and the database seeded)

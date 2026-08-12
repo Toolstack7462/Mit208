@@ -88,8 +88,8 @@ That is the only deliberate omission.
 
 ## Which database the captures were taken against
 
-As of **11 August 2026** the whole set was captured against the application
-running on **PostgreSQL 16.6**, not the SQLite fallback. Screenshot 20 is the
+As of **12 August 2026** the whole set was captured against the application
+running on **PostgreSQL 16.6**, not the SQLite fallback. Screenshot 21 is the
 `/system/database-status` response showing `"engine":"postgresql"` and
 `"using_fallback":false`; `capture_postgres_evidence.py` refuses to run at all if
 the backend reports any other engine.

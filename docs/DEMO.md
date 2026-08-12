@@ -10,7 +10,7 @@ Nothing here needs the internet once the dependencies are installed.
 ## 0. The five minutes before the session
 
 ```bash
-git switch --detach v1.4-final     # the assessed version
+git switch --detach v1.5-final     # the assessed version
 git status                         # must print "nothing to commit, working tree clean"
 ```
 
@@ -26,7 +26,7 @@ Have open in separate browser tabs:
 | 3 | http://127.0.0.1:8000/system/database-status | proof of which engine is live |
 | 4 | https://github.com/Toolstack7462/Mit208 | the repository |
 | 5 | https://github.com/Toolstack7462/Mit208/actions | the passing CI run |
-| 6 | https://github.com/Toolstack7462/Mit208/releases/tag/v1.4-final | the assessed version |
+| 6 | https://github.com/Toolstack7462/Mit208/releases/tag/v1.5-final | the assessed version |
 
 ---
 
@@ -36,12 +36,13 @@ Have open in separate browser tabs:
 # Backend
 cd backend
 python -m venv .venv
-.venv\Scripts\Activate.ps1          # Windows;  source .venv/bin/activate elsewhere
+.\.venv\Scripts\Activate.ps1        # PowerShell
+#   source .venv/bin/activate         # macOS / Linux
 pip install -r requirements-dev.txt
 
 # Frontend
 cd ../frontend
-npm install
+npm ci                               # reproducible install from package-lock.json
 ```
 
 Python 3.11 – 3.14 and Node 20+ are supported. The pins use the compatible-release
@@ -163,7 +164,7 @@ uvicorn app.main:app --port 8001
 SQLite automatically when `DATABASE_URL` is unset, and every feature behaves the
 same — the test suite proves it on both engines. Say so, show
 `/system/database-status` reporting `"using_fallback": true`, and continue. The
-PostgreSQL evidence is already captured in screenshots 20–22 and in the CI run.
+PostgreSQL evidence is already captured in screenshots 21–23 and in the CI run.
 
 **`npm run dev` fails.** Serve the production build that is already verified:
 
@@ -177,8 +178,8 @@ npm run preview -- --port 5173
 
 1. `evidence/video/PhishGuard_Walkthrough.mp4` — four minutes of the real
    application doing the whole workflow.
-2. `evidence/screenshots/` — 24 labelled captures with a generated index.
-3. The report's Appendix F — the same screens at full page size.
+2. `evidence/screenshots/` — 25 labelled captures with a generated index.
+3. The report's Appendix E — selected screens at full page size.
 
 Keep a copy of all three on the same USB stick as the repository. A demonstration
 that cannot run scores nothing; a demonstration that falls back gracefully and is

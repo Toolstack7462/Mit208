@@ -1,7 +1,7 @@
 # PhishGuard — Test Strategy, Evidence and Results
 
 Every figure below was produced by running the commands shown, on this
-repository, on **11 August 2026** and re-run unchanged on **12 August 2026** as part
+repository, on **12 August 2026** as part
 of the final documentation audit. Nothing here is estimated.
 
 **Environment:** Windows 11, Python 3.14.3, Node.js 24.14.1, PostgreSQL 16.6.
@@ -15,15 +15,15 @@ The suite runs on in-memory SQLite by default and on PostgreSQL when
 
 | Layer | Tool | Files | Tests | Result |
 |---|---|---|---|---|
-| Backend unit + API (SQLite) | pytest 9.1.1 | 9 | **170** | **170 passed** |
-| Backend unit + API (**PostgreSQL 16.6**) | pytest 9.1.1 | 9 | **170** | **170 passed** |
+| Backend unit + API (SQLite) | pytest 9.1.1 | 9 | **175** | **175 passed** |
+| Backend unit + API (**PostgreSQL 16.6**) | pytest 9.1.1 | 9 | **175** | **175 passed** |
 | Frontend unit + component | vitest 2.1.9 | 11 | **92** | **92 passed** |
 | Live end-to-end (running server) | `smoke_test.py` | 1 | **22 checks** | **22/22 passed** |
 | Production build | `vite build` | — | — | **built in 16.70s**, 1655 modules |
 | Secret scan | `evidence/secret_scan.py` | every tracked file | — | **0 unacknowledged findings** |
-| **Total automated** | | **20** | **262** | **262 passed, 0 failed** |
+| **Total automated** | | **20** | **267** | **267 passed, 0 failed** |
 
-**Backend statement coverage: 90% (847 of 943 statements).**
+**Backend statement coverage: 90% (861 of 953 statements).**
 
 The backend suite was run twice — once on in-memory SQLite and once against a
 real PostgreSQL 16.6 server — and passes identically on both. That is what
@@ -35,16 +35,16 @@ SQLite would not (see BUG-03 and BUG-16, both of which are engine-specific).
 ## 2. How to reproduce
 
 ```bash
-# Backend — 170 tests, no server or database needed (in-memory SQLite)
+# Backend — 175 tests, no server or database needed (in-memory SQLite)
 cd backend
 python -m venv .venv && .venv\Scripts\Activate.ps1     # or: source .venv/bin/activate
 pip install -r requirements-dev.txt
-python -m pytest                                        # 170 passed (SQLite)
+python -m pytest                                        # 175 passed (SQLite)
 
 # The same suite against PostgreSQL, which is the assessed target:
 #   createdb phishguard_test
 #   $env:TEST_DATABASE_URL="postgresql+psycopg2://USER:PASS@localhost:5432/phishguard_test"
-#   python -m pytest                                      # 170 passed (PostgreSQL)
+#   python -m pytest                                      # 175 passed (PostgreSQL)
 python -m pytest --cov=app --cov-report=term-missing    # + coverage
 
 # Frontend — 92 tests
@@ -66,7 +66,7 @@ python evidence/secret_scan.py          # -> SECRET SCAN CLEAN
 
 ---
 
-## 3. Backend suite — 170 tests, run on both engines
+## 3. Backend suite — 175 tests, run on both engines
 
 | File | Tests | Covers |
 |---|---|---|
@@ -75,7 +75,7 @@ python evidence/secret_scan.py          # -> SECRET SCAN CLEAN
 | `tests/test_emails.py` | 9 | Listing, risk sort order, staff isolation, detail + reasons, status transitions, 404 |
 | `tests/test_requests_audit.py` | 7 | Request creation, approval releases the email, double-decision conflict, dashboard shape, audit trail |
 | `tests/test_validation.py` | 13 | Input validation, boundary lengths, unique message ids, LIKE escaping, error envelope |
-| `tests/test_security.py` | 27 | Secret-key enforcement, rate limiting, credential handling, privilege escalation, token claims and types, bcrypt input boundary, security headers |
+| `tests/test_security.py` | 32 | Secret-key enforcement, rate limiting, credential handling, privilege escalation, token claims and types, the bcrypt 72-**byte** boundary including multibyte passwords, auditing of the OAuth2 token route, the single reported version, security headers |
 | `tests/test_release_workflow.py` | 14 | Duplicate suppression, justification rules, held-only rule, decision path |
 | `tests/test_integrity.py` | 35 | Defensive parsing of stored data, database CHECK constraints, the partial unique index, decision-completeness, transaction rollback, and the concurrent-duplicate race |
 | `tests/test_transitions.py` | 52 | The email state machine (BUG-17) and the staff-only release-request rule (BUG-18): the rule table itself, every permitted and refused transition over the API, no write on a refusal, the frontend mirror agreeing with the backend, ownership enforcement, and approval of a stale request |
@@ -97,29 +97,29 @@ app/audit.py                   7      0   100%
 app/config.py                 32      0   100%
 app/database.py               19      1    95%
 app/deps.py                   28      2    93%
-app/main.py                   86      5    94%
+app/main.py                   87      4    95%
 app/ml_model.py                3      3     0%   <- unimplemented placeholder
 app/models.py                 86      0   100%
 app/ratelimit.py              35      1    97%
 app/routers/__init__.py        0      0   100%
 app/routers/audit.py          14      1    93%
-app/routers/auth.py           53      4    92%
+app/routers/auth.py           55      1    98%
 app/routers/dashboard.py      26      3    88%
 app/routers/emails.py        108      3    97%
 app/routers/requests.py       80      1    99%
-app/schemas.py               159      7    96%
+app/schemas.py               166      7    96%
 app/scoring.py               101      5    95%
 app/security.py               32      0   100%
 app/seed.py                   60     60     0%   <- CLI script, exercised by smoke test
 app/transitions.py            13      0   100%
 ----------------------------------------------
-TOTAL                        943     96    90%
+TOTAL                        953     92    90%
 ```
 
 The two 0% modules are honest exclusions: `ml_model.py` is a documented
 placeholder that is deliberately not wired in, and `seed.py` is a command-line
 script covered by the live smoke test instead. Excluding those two, coverage of
-the running application code is **96%** (847 of 880 statements).
+the running application code is **97%** (861 of 890 statements).
 
 ---
 
@@ -299,7 +299,7 @@ Mapped to the rubric's minimum testing areas.
 
 ---
 
-## 7. PostgreSQL verification (11 August 2026)
+## 7. PostgreSQL verification (12 August 2026)
 
 PostgreSQL is the assessed target while the automated suite defaults to SQLite,
 so the whole stack was run against a real PostgreSQL **16.6** server. This is the
@@ -324,10 +324,10 @@ rm -rf <cluster-dir>
 | 3 | Partial unique index present in `pg_indexes` | confirmed |
 | 4 | `python -m app.seed` **into the psql-created tables** (no `--reset`) | 4 users, 8 emails |
 | 5 | 6 invalid writes attempted directly in SQL | all 6 rejected |
-| 6 | Full backend suite with `TEST_DATABASE_URL` | **170 passed** |
+| 6 | Full backend suite with `TEST_DATABASE_URL` | **175 passed** |
 | 7 | `smoke_test.py` against the app on PostgreSQL | **22/22 passed** |
 | 8 | `/system/database-status` | `"engine":"postgresql","using_fallback":false` |
-| 9 | Screenshots 20–22 captured from the PostgreSQL-backed application | captured |
+| 9 | Screenshots 21–23 captured from the PostgreSQL-backed application | captured |
 
 ### The partial index, as PostgreSQL stores it
 
@@ -360,7 +360,7 @@ The last of those — `ck_request_decision_complete`, which requires a decided
 request to name its reviewer and a pending one not to — is also covered from the
 application side by `test_a_decided_request_must_record_its_reviewer` and
 `test_a_pending_request_must_not_record_a_reviewer`, which run against this same
-PostgreSQL server as part of the 170.
+PostgreSQL server as part of the 175.
 
 ### What running on PostgreSQL actually caught
 
@@ -374,7 +374,7 @@ Two things a SQLite-only run could not have found:
    the columns instead. It passed on PostgreSQL and failed on SQLite. Running
    both engines is what exposed it.
 
-Screenshots 20–22 in `evidence/screenshots/` were captured from the application
+Screenshots 21–23 in `evidence/screenshots/` were captured from the application
 while it was connected to PostgreSQL; `capture_postgres_evidence.py` refuses to
 run if the backend reports any other engine.
 
@@ -388,7 +388,7 @@ cd backend
 export DATABASE_URL=postgresql+psycopg2://USER:PASS@localhost:5432/phishguard_db
 export TEST_DATABASE_URL=postgresql+psycopg2://USER:PASS@localhost:5432/phishguard_test
 python -m app.seed          # NOT --reset: that would drop the psql-created tables
-python -m pytest            # 170 passed
+python -m pytest            # 175 passed
 uvicorn app.main:app --port 8000 &
 python smoke_test.py        # ALL 22/22 CHECKS PASSED
 ```
@@ -403,9 +403,15 @@ The `backend-postgres` CI job performs the same sequence on every push.
 
 | Job | What it does |
 |---|---|
-| `backend` | Installs and runs the 170 tests + coverage on Python **3.11, 3.12 and 3.13** |
-| `backend-postgres` | Starts a PostgreSQL 16 service, applies `database/schema.sql`, seeds and asserts 4 users + 8 emails, checks the constraints reject invalid SQL, then runs the whole 170-test suite against PostgreSQL |
+| `backend` | Installs and runs the 175 tests + coverage on Python **3.11, 3.12 and 3.13** |
+| `backend-postgres` | Starts a PostgreSQL 16 service, applies `database/schema.sql`, seeds and asserts 4 users + 8 emails, checks the constraints reject invalid SQL, then runs the whole 175-test suite against PostgreSQL |
 | `secrets` | Runs `evidence/secret_scan.py` over every tracked file and fails the build on any unacknowledged credential, key or token |
+
+The workflow declares **four jobs**. Because the backend job runs as a matrix across
+Python 3.11, 3.12 and 3.13, one run performs **six job executions**, which is the
+figure the report quotes. The local integrity probe rejects **6 invalid writes**; the
+`backend-postgres` CI job checks **5 invalid-write categories**. These are different
+checks and are not merged into a single number.
 | `frontend` | `npm ci`, the 92 vitest tests, production `vite build` |
 
 This matters for two reasons: the Python matrix is the regression guard for

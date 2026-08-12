@@ -1,6 +1,6 @@
 # Recording timeline
 
-Total duration: **240 seconds (4.0 minutes)**
+Total duration: **238 seconds (3:58)**, inside the brief's three-to-four-minute range.
 
 Captured from the running application by `evidence/record_walkthrough.py`.
 
@@ -19,4 +19,4 @@ Captured from the running application by `evidence/record_walkthrough.py`.
 | 3:10 | Segment 5: audit trail |
 | 3:23 | Segment 5: role-based access control enforced |
 | 3:34 | Segment 5: error handling when the API is unreachable |
-| 4:00 | Recording complete |
+| 3:58 | Recording complete |

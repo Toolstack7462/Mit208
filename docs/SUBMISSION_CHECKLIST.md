@@ -116,7 +116,8 @@ Legend: **[x]** done and verifiable · **[ ]** still requires the author
 
 ## 6. Walkthrough video (3–4 minutes)
 
-- [x] 4:00 capture of the actual running software, not slides
+- [x] 3:58 capture of the actual running software, not slides — inside the
+      brief's three-to-four-minute range, verified from the file's own header
 - [x] Paced to the five segments in the brief; timeline in
       `evidence/video/TIMING.md`
 - [x] Readable resolution (1280x720, H.264 MP4)

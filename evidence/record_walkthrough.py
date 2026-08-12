@@ -36,12 +36,17 @@ STAFF = ("staff@phishguard.local", "Staff@123")
 
 # Segment boundaries from the assessment brief, used to keep the recording on
 # schedule. (label, target end time in seconds)
+#
+# The brief allows three to four minutes. The final target is 236 rather than 240
+# because the encoder flushes a short tail after the last frame: a run paced to
+# exactly 240 produced a 240.12-second file, which is over the limit even though
+# Windows rounds it to 4:00 and hides the overrun.
 SEGMENTS = [
     ("Problem and final MVP", 30),
     ("Architecture and components", 75),
     ("Main working user flow", 140),
-    ("Packages, a decision and a bug fixed", 190),
-    ("Testing, limitations, repository", 240),
+    ("Packages, a decision and a bug fixed", 188),
+    ("Testing, limitations, repository", 236),
 ]
 
 started = 0.0

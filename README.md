@@ -520,7 +520,7 @@ directly to the API anyway, it is refused with a 409:
 ## Walkthrough recording
 
 [`evidence/video/PhishGuard_Walkthrough.mp4`](evidence/video/PhishGuard_Walkthrough.mp4)
-— 4:00, 1280x720, H.264, **silent**. A capture of the real application produced by
+— 3:58, 1280x720, H.264, **silent**. A capture of the real application produced by
 [`evidence/record_walkthrough.py`](evidence/record_walkthrough.py), paced to the
 five segments the assessment brief asks for. The on-screen timeline is in
 `evidence/video/TIMING.md`.

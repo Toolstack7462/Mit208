@@ -176,8 +176,8 @@ npm run preview -- --port 5173
 
 **Nothing runs at all.** The offline fallback, in order of preference:
 
-1. `evidence/video/PhishGuard_Walkthrough.mp4` — four minutes of the real
-   application doing the whole workflow.
+1. `evidence/video/PhishGuard_Walkthrough.mp4` — just under four minutes of the
+   real application doing the whole workflow.
 2. `evidence/screenshots/` — 25 labelled captures with a generated index.
 3. The report's Appendix E — selected screens at full page size.
 

@@ -281,7 +281,7 @@ BODY = {
         "state rules on the server and in the database. It is verified by 175 backend "
         "tests at 90 per cent statement coverage on both SQLite and PostgreSQL 16.6, "
         "92 frontend tests, and 22 live API checks per engine, plus 25 screenshots and "
-        "a four-minute walkthrough of the running application."
+        "a recorded walkthrough of the running application."
     ),
 
     # --- 1. Background and objectives ---------------------------------------
@@ -491,7 +491,8 @@ TIGHTEN = {
     "model. The core workflow is complete, with role and state rules enforced on "
     "the server and in the database, and verified by 175 backend tests at 90 per "
     "cent coverage on both SQLite and PostgreSQL 16.6, 92 frontend tests, 22 live "
-    "API checks per engine and 25 screenshots."
+    "API checks per engine, 25 screenshots and a recorded walkthrough of the "
+    "running application."
  ),
  'Phishing review is difficult': (
     "Phishing review is difficult when users receive only a warning without "
@@ -635,8 +636,8 @@ TIGHTEN = {
     "PhishGuard demonstrates a coherent, explainable phishing-triage workflow "
     "with role-based access, validated state changes, controlled release "
     "requests, audit evidence and repeatable testing. The final review improved "
-    "reliability and security without replacing the architecture or overstating "
-    "the rule engine. It is supported by 267 automated tests, 22 live API checks "
+    "reliability and security without replacing the architecture. It is supported "
+    "by 267 automated tests, 22 live API checks "
     "per engine and 25 labelled screenshots, all reproducible from the "
     "repository. Its boundaries are stated: synthetic data, simulated headers and "
     "no trained classifier. Next steps are browser-level testing and stronger "

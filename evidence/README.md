@@ -26,7 +26,7 @@ Re-run the scripts after any interface change and the evidence updates itself.
 | `figures/` | The four generated figures used by the report and the deck |
 | `record_walkthrough.py` | Records a 4-minute screen capture of the same workflow |
 | `convert_video.py` | Converts the recording to H.264 MP4 |
-| `video/PhishGuard_Walkthrough.mp4` | The walkthrough, 4:00, 1280x720, **silent** |
+| `video/PhishGuard_Walkthrough.mp4` | The walkthrough, 3:58, 1280x720, **silent** |
 | `video/PhishGuard_Walkthrough_raw.webm` | The original Playwright recording (VP8) |
 | `video/TIMING.md` | Generated timeline of what appears when |
 | `NARRATION_SCRIPT.md` | Draft narration and shot list for the student to record |

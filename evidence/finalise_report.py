@@ -739,7 +739,7 @@ APPENDIX_A = [
      "409, email remained 'inbox'", "Pass"],
     ["A7", "Staff member lists email, then opens the audit log",
      "Only their own mail; 403 on the audit route",
-     "6 of 8 returned; 403", "Pass"],
+     "5 of 8 returned; 403", "Pass"],
     ["A8", "Second pending release request for the same email",
      "409 and no second row, enforced by a partial unique index",
      "As expected, concurrently as well", "Pass"],

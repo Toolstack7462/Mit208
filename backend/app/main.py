@@ -11,6 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from . import __version__
 from .config import settings
 from .database import Base, engine
 from .routers import audit, auth, dashboard, emails, requests
@@ -44,7 +45,7 @@ app = FastAPI(
         "PhishGuard — phishing email detection and quarantine management API.\n\n"
         "Rule-based risk scoring with JWT-secured analyst and staff workflows."
     ),
-    version="1.0.0",
+    version=__version__,
     lifespan=lifespan,
 )
 
@@ -162,7 +163,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 @app.get("/", tags=["health"])
 def root():
-    return {"name": "PhishGuard API", "version": "1.0.0", "docs": "/docs", "status": "ok"}
+    return {"name": "PhishGuard API", "version": __version__, "docs": "/docs", "status": "ok"}
 
 
 @app.get("/api/health", tags=["health"])
@@ -177,7 +178,7 @@ def health():
     return {
         "status": "ok" if connected else "degraded",
         "app": "PhishGuard API",
-        "version": "1.0.0",
+        "version": __version__,
         "database_connected": connected,
     }
 

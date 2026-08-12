@@ -3,7 +3,7 @@
 This does not recreate the deck. All ten slides, their layout, colours, fonts and
 structure are kept. It makes five kinds of change:
 
-  1. Replaces every superseded figure with the verified one from the 11 August 2026
+  1. Replaces every superseded figure with the verified one from the 12 August 2026
      run, and corrects two claims the code does not support — the deck said there
      was no rate limiting (there is a per-IP failed-login limiter) and that the
      public CI result was still to be confirmed (it passes).
@@ -42,7 +42,7 @@ SHOTS = HERE / "screenshots"
 FIGURES = HERE / "figures"
 TMP = HERE / "_pptx_tmp"
 
-TAG = "v1.4-final"
+TAG = "v1.5-final"
 REPO = "github.com/Toolstack7462/Mit208"
 
 # The presenter's prompt sheet lands here, outside the submission folder.
@@ -59,14 +59,14 @@ FONT = "Aptos"
 BLANK = "_" * 14
 
 # ---------------------------------------------------------------------------
-# Verified figures, 11 August 2026 (docs/TESTING.md)
+# Verified figures, 12 August 2026 (docs/TESTING.md)
 # ---------------------------------------------------------------------------
-BACKEND_TESTS = "170"
+BACKEND_TESTS = "175"
 COVERAGE_PCT = "90%"
-COVERAGE_FRAC = "847 / 943"
+COVERAGE_FRAC = "861 / 953"
 SMOKE = "22/22"
 FRONTEND_TESTS = "92/92"
-TOTAL_TESTS = "262"
+TOTAL_TESTS = "267"
 
 # Crop boxes shared with the report figure, so the deck and the report show the
 # same four steps framed identically. Kept in step with
@@ -75,9 +75,9 @@ PANES = [
     ("04-analyst-inbox.png", (585, 235, 1465, 1075), "1", "Triage: ordered by risk"),
     ("06-email-detail-explainable-score.png", (1530, 690, 2735, 1665), "2",
      "Explain: a named indicator per point"),
-    ("10-release-request-validation.png", (1176, 680, 2024, 1328), "3",
-     "Challenge: justified release request"),
-    ("13-release-request-approved.png", (575, 245, 3150, 885), "4",
+    ("11-release-request-valid-reason.png", (1176, 680, 2024, 1328), "3",
+     "Submit valid request: justification accepted"),
+    ("14-release-request-approved.png", (575, 245, 3150, 885), "4",
      "Decide: analyst approves, email released and audited in one transaction"),
 ]
 
@@ -127,6 +127,9 @@ REPLACEMENTS: list[tuple[str, str]] = [
 
     # --- Slide 9 -----------------------------------------------------------
     ("Limitations / not yet final", "Limitations"),
+    # No unresolved product issues remain; the slide reports results and the
+    # limitations that are by design.
+    ("9. Results, limitations and remaining issues", "9. Results and limitations"),
     ("Public CI result still to confirm; PostgreSQL verified locally",
      "Small synthetic dataset; no measured behaviour at production volume"),
     # "yet" reads as provisional in a submitted deck.
@@ -185,8 +188,8 @@ NOTES: list[tuple[int, str, str]] = [
     (7, "State the figures and their environment: 118 backend tests at 89 per cent "
         "statement coverage (823 of 924 statements), run on both SQLite and PostgreSQL "
         "16.6, 69 frontend tests, and 20 live checks driving a real running server.",
-        "State the figures and their environment: 170 backend tests at 90 per cent "
-        "statement coverage (847 of 943 statements), run on both SQLite and PostgreSQL "
+        "State the figures and their environment: 175 backend tests at 90 per cent "
+        "statement coverage (861 of 953 statements), run on both SQLite and PostgreSQL "
         "16.6, 92 frontend tests, and 22 live checks driving a real running server."),
     (7, "The suite defaults to in-memory SQLite and was also run in full against a "
         "PostgreSQL 16.6 server, where the schema applied cleanly, all ten check "
@@ -651,6 +654,14 @@ def main() -> int:
                      title="PhishGuard — Technical Presentation (MIT208 Assessment 3)")
 
     prs.save(str(dst))
+
+    # python-pptx leaves docProps/app.xml reporting the original Notes count and
+    # keeps the (now unreferenced) notes master. Both are corrected on the saved
+    # package: a submitted deck should report zero notes and carry no notes parts.
+    from strip_pptx_notes import finalise_notes_metadata
+    for line in finalise_notes_metadata(dst):
+        print(f"  {line}")
+
     print(f"Presentation written: {dst}")
     print(f"  {len(REPLACEMENTS)} text substitutions, all matched")
     print(f"  {len(TILES)} metric tiles updated on slide 7")

@@ -46,9 +46,11 @@ def _validate_address(value: str, field: str) -> str:
 # ---- Auth -----------------------------------------------------------------
 class LoginRequest(BaseModel):
     email: str = Field(min_length=1, max_length=MAX_ADDRESS)
-    # 72 is bcrypt's input limit (see security.BCRYPT_MAX_BYTES). Bounding it
-    # here keeps an over-long submission a validation error rather than a value
-    # that can never match any stored hash.
+    # bcrypt's limit is 72 BYTES, not 72 characters. Pydantic's max_length counts
+    # characters, so it alone let a 72-character password of two-byte characters
+    # through at 144 bytes; security._password_bytes then refused it and the caller
+    # saw an opaque 401 instead of a validation error. max_length stays as a cheap
+    # first bound and the validator below enforces the limit that actually applies.
     password: str = Field(min_length=1, max_length=BCRYPT_MAX_BYTES)
 
     @field_validator("email")
@@ -57,6 +59,18 @@ class LoginRequest(BaseModel):
         # Login stays lenient on format (a malformed address is simply an
         # unknown user -> 401) but is normalised so case never blocks a login.
         return v.strip().lower()
+
+    @field_validator("password")
+    @classmethod
+    def _password_within_bcrypt_limit(cls, v: str) -> str:
+        encoded = len(v.encode("utf-8"))
+        if encoded > BCRYPT_MAX_BYTES:
+            raise ValueError(
+                f"password must be {BCRYPT_MAX_BYTES} bytes or fewer when encoded as "
+                f"UTF-8 (received {encoded}); accented and non-Latin characters use "
+                "more than one byte each"
+            )
+        return v
 
 
 class Token(BaseModel):

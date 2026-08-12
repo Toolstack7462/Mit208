@@ -1270,7 +1270,9 @@ def main() -> int:
     a_cap = add_caption(doc, a_heading,
                         "Table A1. Representative cases with their expected and actual "
                         "results. Every row was executed.", above=True)
-    a_table = build_table(doc, a_cap, APPENDIX_A, [0.55, 1.75, 1.95, 1.75, 0.60])
+    a_table = build_table(doc, a_cap, APPENDIX_A,
+                        # "Test ID" and "Outcome" both need to hold one line.
+                        [0.64, 1.56, 1.90, 1.95, 0.80])
 
     # Appendix B - planned versus completed.
     b_heading = para_after(a_table, style="Heading 1")

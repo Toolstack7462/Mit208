@@ -16,15 +16,16 @@ Database engine serving these captures: **PostgreSQL (using_fallback=False)**. T
 | 08 | `08-release-requests-analyst.png` | Release-request queue awaiting an analyst decision |
 | 09 | `09-staff-portal.png` | Staff portal showing only the signed-in user's own mail |
 | 10 | `10-release-request-validation.png` | Release request blocked until an adequate justification is supplied (mirrors the backend's 10-character rule) |
-| 11 | `11-release-request-submitted.png` | Release request accepted and confirmed to the staff member |
-| 12 | `12-duplicate-request-blocked.png` | A second request for the same email is refused (one open request per user) |
-| 13 | `13-release-request-approved.png` | Analyst approval recorded; the underlying email is released in the same transaction |
-| 14 | `14-audit-after-approval.png` | Audit trail after the approval, showing release_request_approved |
-| 15 | `15-staff-denied-audit-access.png` | Staff navigating to /audit is redirected to the dashboard; the API also returns 403 independently of the UI |
-| 16 | `16-error-state-api-unreachable.png` | Dashboard when the API cannot be reached: an explicit, retryable error instead of an empty or permanently loading screen |
-| 17 | `17-openapi-docs.png` | Interactive OpenAPI documentation generated from the FastAPI application |
-| 18 | `18-invalid-transition-blocked.png` | Delivered email selected: Release is disabled because the API accepts it only from quarantined or confirmed_phishing, while Quarantine and Confirm Phishing stay available |
-| 19 | `19-release-request-not-applicable.png` | Staff view of a delivered email: the request button reads 'Already Delivered' and is disabled, because a release request applies only to email that is being held |
+| 11 | `11-release-request-valid-reason.png` | The same form with an adequate justification: the counter clears the 10-character minimum and Submit Request becomes available |
+| 12 | `12-release-request-submitted.png` | Release request accepted and confirmed to the staff member |
+| 13 | `13-duplicate-request-blocked.png` | A second request for the same email is refused (one open request per user) |
+| 14 | `14-release-request-approved.png` | Analyst approval recorded; the underlying email is released in the same transaction |
+| 15 | `15-audit-after-approval.png` | Audit trail after the approval, showing release_request_approved |
+| 16 | `16-staff-denied-audit-access.png` | Staff navigating to /audit is redirected to the dashboard; the API also returns 403 independently of the UI |
+| 17 | `17-error-state-api-unreachable.png` | Dashboard when the API cannot be reached: an explicit, retryable error instead of an empty or permanently loading screen |
+| 18 | `18-openapi-docs.png` | Interactive OpenAPI documentation generated from the FastAPI application |
+| 19 | `19-invalid-transition-blocked.png` | Delivered email selected: Release is disabled because the API accepts it only from quarantined or confirmed_phishing, while Quarantine and Confirm Phishing stay available |
+| 20 | `20-release-request-not-applicable.png` | Staff view of a delivered email: the request button reads 'Already Delivered' and is disabled, because a release request applies only to email that is being held |
 
 ## PostgreSQL evidence
 
@@ -32,15 +33,6 @@ Captured by `evidence/capture_postgres_evidence.py` against the application runn
 
 | File | What it shows |
 |---|---|
-| `20-postgresql-database-status.png` | The API reporting PostgreSQL as the live engine, with using_fallback false — credentials are never included, only the URL scheme |
-| `21-postgresql-dashboard.png` | The analyst dashboard rendered from PostgreSQL data, on the assessed target database rather than the SQLite fallback |
-| `22-postgresql-openapi.png` | OpenAPI documentation served by the backend while connected to PostgreSQL |
-
-## Continuous integration and release evidence
-
-Captured by `evidence/capture_ci_evidence.py`, which reads the run from the GitHub API and refuses to write anything unless it passed. Run #13 on commit 7559413, all 6 jobs green.
-
-| File | What it shows |
-|---|---|
-| `23-ci-run-passing.png` | GitHub Actions run #13 on the public repository, every job green |
-| `24-release-tag.png` | The assessed version, tag v1.4-final, on the public repository |
+| `21-postgresql-database-status.png` | The API reporting PostgreSQL as the live engine, with using_fallback false — credentials are never included, only the URL scheme |
+| `22-postgresql-dashboard.png` | The analyst dashboard rendered from PostgreSQL data, on the assessed target database rather than the SQLite fallback |
+| `23-postgresql-openapi.png` | OpenAPI documentation served by the backend while connected to PostgreSQL |

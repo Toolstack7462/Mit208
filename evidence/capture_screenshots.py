@@ -151,34 +151,42 @@ def run(page) -> None:
          "Release request blocked until an adequate justification is supplied "
          "(mirrors the backend's 10-character rule)")
 
-    # ---- 11 Valid submission ---------------------------------------------
+    # ---- 11 Valid reason accepted by the form, Submit now enabled ---------
+    # The workflow figure's "submit a valid request" step needs the moment the form
+    # accepts the justification, not the moment it refuses one. Captured before the
+    # click so the enabled Submit button and the character counter are both visible.
     page.fill("#release-reason",
               "I was expecting this invoice from our supplier and I recognise the sender.")
-    page.wait_for_timeout(300)
+    page.wait_for_timeout(400)
+    shot(page, "11-release-request-valid-reason",
+         "The same form with an adequate justification: the counter clears the "
+         "10-character minimum and Submit Request becomes available")
+
+    # ---- 12 Valid submission ---------------------------------------------
     page.click("button:has-text('Submit Request')")
     page.wait_for_timeout(1600)
-    shot(page, "11-release-request-submitted",
+    shot(page, "12-release-request-submitted",
          "Release request accepted and confirmed to the staff member")
 
-    # ---- 12 Duplicate suppression ----------------------------------------
+    # ---- 13 Duplicate suppression ----------------------------------------
     page.click("button:has-text('Request Email Release')")
     page.wait_for_timeout(1000)
-    shot(page, "12-duplicate-request-blocked",
+    shot(page, "13-duplicate-request-blocked",
          "A second request for the same email is refused (one open request per user)")
 
-    # ---- 13 Analyst approves ---------------------------------------------
+    # ---- 14 Analyst approves ---------------------------------------------
     sign_out(page)
     login(page, *ANALYST)
     page.goto(f"{BASE}/release-requests", wait_until="networkidle")
     approve = page.locator("button:has-text('Approve')").first
     approve.click()
     page.wait_for_timeout(1800)
-    shot(page, "13-release-request-approved",
+    shot(page, "14-release-request-approved",
          "Analyst approval recorded; the underlying email is released in the same transaction")
 
     # ---- 14 Audit reflects the decision ----------------------------------
     page.goto(f"{BASE}/audit", wait_until="networkidle")
-    shot(page, "14-audit-after-approval",
+    shot(page, "15-audit-after-approval",
          "Audit trail after the approval, showing release_request_approved")
 
     # ---- 15 Role-based access control ------------------------------------
@@ -186,7 +194,7 @@ def run(page) -> None:
     login(page, *STAFF)
     page.goto(f"{BASE}/audit", wait_until="networkidle")
     page.wait_for_timeout(900)
-    shot(page, "15-staff-denied-audit-access",
+    shot(page, "16-staff-denied-audit-access",
          "Staff navigating to /audit is redirected to the dashboard; the API also "
          "returns 403 independently of the UI")
 
@@ -195,7 +203,7 @@ def run(page) -> None:
     page.route("**/api/**", lambda route: route.abort())
     page.goto(f"{BASE}/dashboard", wait_until="domcontentloaded")
     page.wait_for_selector("[role=alert]", timeout=15000)
-    shot(page, "16-error-state-api-unreachable",
+    shot(page, "17-error-state-api-unreachable",
          "Dashboard when the API cannot be reached: an explicit, retryable error "
          "instead of an empty or permanently loading screen")
     page.unroute("**/api/**")
@@ -203,7 +211,7 @@ def run(page) -> None:
     # ---- 17 API documentation --------------------------------------------
     page.goto("http://127.0.0.1:8000/docs", wait_until="networkidle")
     page.wait_for_timeout(2000)
-    shot(page, "17-openapi-docs",
+    shot(page, "18-openapi-docs",
          "Interactive OpenAPI documentation generated from the FastAPI application")
 
     # ---- 18 State machine: invalid analyst actions are not offered ---------
@@ -213,7 +221,7 @@ def run(page) -> None:
     login(page, *ANALYST)
     page.goto(f"{BASE}/inbox", wait_until="networkidle")
     select_row_with_status(page, "Inbox")
-    shot(page, "18-invalid-transition-blocked",
+    shot(page, "19-invalid-transition-blocked",
          "Delivered email selected: Release is disabled because the API accepts it "
          "only from quarantined or confirmed_phishing, while Quarantine and "
          "Confirm Phishing stay available")
@@ -223,7 +231,7 @@ def run(page) -> None:
     login(page, *STAFF)
     page.goto(f"{BASE}/staff", wait_until="networkidle")
     select_row_with_status(page, "Inbox")
-    shot(page, "19-release-request-not-applicable",
+    shot(page, "20-release-request-not-applicable",
          "Staff view of a delivered email: the request button reads 'Already "
          "Delivered' and is disabled, because a release request applies only to "
          "email that is being held")

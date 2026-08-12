@@ -62,27 +62,27 @@ def require_postgres() -> dict:
 
 
 def run(page) -> None:
-    # 20 — the engine the API reports, straight from the endpoint.
+    # 21 — the engine the API reports, straight from the endpoint.
     page.goto(f"{API}/system/database-status", wait_until="networkidle")
-    shot(page, "20-postgresql-database-status",
+    shot(page, "21-postgresql-database-status",
          "The API reporting PostgreSQL as the live engine, with using_fallback "
          "false — credentials are never included, only the URL scheme")
 
-    # 21 — the same workflow, rendered from PostgreSQL data.
+    # 22 — the same workflow, rendered from PostgreSQL data.
     page.goto(f"{BASE}/login", wait_until="networkidle")
     page.fill("#login-email", ANALYST[0])
     page.fill("#login-password", ANALYST[1])
     page.click("button:has-text('Sign In')")
     page.wait_for_url("**/dashboard", timeout=15000)
     page.wait_for_load_state("networkidle")
-    shot(page, "21-postgresql-dashboard",
+    shot(page, "22-postgresql-dashboard",
          "The analyst dashboard rendered from PostgreSQL data, on the assessed "
          "target database rather than the SQLite fallback")
 
-    # 22 — the generated API surface, served from the PostgreSQL-backed app.
+    # 23 — the generated API surface, served from the PostgreSQL-backed app.
     page.goto(f"{API}/docs", wait_until="networkidle")
     page.wait_for_timeout(1500)
-    shot(page, "22-postgresql-openapi",
+    shot(page, "23-postgresql-openapi",
          "OpenAPI documentation served by the backend while connected to PostgreSQL")
 
 

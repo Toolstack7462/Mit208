@@ -34,8 +34,8 @@ REPO_URL = f"https://github.com/{OWNER_REPO}"
 VIEWPORT = {"width": 1600, "height": 1000}
 SCALE = 2
 
-RUN_SHOT = "23-ci-run-passing.png"
-TAG_SHOT = "24-release-tag.png"
+RUN_SHOT = "24-ci-run-passing.png"
+TAG_SHOT = "25-release-tag.png"
 
 
 def api(path: str):
@@ -54,7 +54,7 @@ def latest_run() -> dict:
 
 
 def main() -> int:
-    tag = sys.argv[1] if len(sys.argv) > 1 else "v1.2-final"
+    tag = sys.argv[1] if len(sys.argv) > 1 else "v1.5-final"
 
     run = latest_run()
     if run["status"] != "completed" or run["conclusion"] != "success":

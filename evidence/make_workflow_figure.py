@@ -60,13 +60,17 @@ PANES = [
      "The score is never an opaque number: the panel names the indicator behind "
      "every point it awarded."),
 
-    ("10-release-request-validation.png", (1176, 680, 2024, 1328),
-     "3. Challenge",
-     "The recipient can ask for a held message back, with a justification the form "
-     "refuses to submit until it is long enough."),
+    # The accepted justification, not the rejected one. This pane previously showed
+    # the validation failure — "too short" with Submit disabled — under a caption
+    # describing a justified request, so the figure contradicted itself. The refusal
+    # is genuine evidence and is kept, at full size, in the report's appendix.
+    ("11-release-request-valid-reason.png", (1176, 680, 2024, 1328),
+     "3. Submit valid request",
+     "An adequate justification clears the ten-character minimum and the form "
+     "accepts it, so the recipient can send the request for review."),
 
-    ("13-release-request-approved.png", (575, 245, 3150, 885),
-     "4. Decide",
+    ("14-release-request-approved.png", (575, 245, 3150, 885),
+     "4. Analyst decision",
      "Only an analyst or an administrator decides. Approval releases the email and writes the "
      "review and audit rows in the same transaction."),
 ]

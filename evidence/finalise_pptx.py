@@ -213,7 +213,7 @@ NOTES: list[tuple[int, str, str]] = [
         "1600px screen shrunk to a thumbnail renders its text at about 2pt. Walk the "
         "four steps in order; do not read the captions aloud."),
     (8, "Evidence: evidence/screenshots (17 images with an index).",
-        "Evidence: evidence/screenshots (24 images with a generated index). The same "
+        "Evidence: evidence/screenshots (25 images with a generated index). The same "
         "four crops are Figure 3 in the report."),
     (10, "Close on outcome and honesty: the core MVP works end to end, is covered by "
          "179 automated tests plus 20 live checks, and is reproducible from the "
@@ -500,7 +500,7 @@ def rebuild_slide8(prs) -> None:
     textbox(slide, X0, 6.62, CONTENT_W, 0.26,
             "Also captured: the refused duplicate request (409), the refused short "
             "justification (422), the disabled invalid transition and the "
-            "API-unreachable error state — all 24 images are in evidence/screenshots.",
+            "API-unreachable error state — all 25 images are in evidence/screenshots.",
             size=9.5, bold=True, colour=RGBColor(0xB6, 0x3A, 0x3A), align=PP_ALIGN.CENTER)
 
 

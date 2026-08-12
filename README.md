@@ -21,7 +21,7 @@ real email data is used.
 | Interactive API documentation | http://localhost:8000/docs |
 | Database | PostgreSQL `phishguard_db` (SQLite fallback available) |
 
-**Assessed version:** [`v1.5-final`](https://github.com/Toolstack7462/Mit208/releases/tag/v1.5-final).
+**Assessed version:** [`v1.6-final`](https://github.com/Toolstack7462/Mit208/releases/tag/v1.6-final).
 Earlier `*-final` tags mark intermediate states and were left where they point
 rather than moved.
 

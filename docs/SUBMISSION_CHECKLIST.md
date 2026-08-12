@@ -24,10 +24,10 @@ Legend: **[x]** done and verifiable · **[ ]** still requires the author
       configuration, how to run, test accounts, testing, limitations, AI-use note
 - [x] **Meaningful commit history** — work committed in separate, purposeful
       commits rather than one bulk upload
-- [x] **Assessed version tagged `v1.5-final`** — annotated tag pushed, carrying the
+- [x] **Assessed version tagged `v1.6-final`** — annotated tag pushed, carrying the
       verified figures in its message. The earlier `*-final` tags were left where
       they point rather than moved, so every version stays identifiable. The tag
-      resolves publicly at `/releases/tag/v1.5-final`
+      resolves publicly at `/releases/tag/v1.6-final`
 - [x] **Passing GitHub Actions run** — the run for the tagged commit is green on all
       six jobs. The run number, commit and per-job result are recorded in
       `evidence/ci_evidence.json` and captured in

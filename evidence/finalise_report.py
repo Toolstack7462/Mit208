@@ -49,7 +49,7 @@ SHOTS = HERE / "screenshots"
 REPO_URL = "https://github.com/Toolstack7462/Mit208"
 # The assessed version. The earlier *-final tags are intermediate markers, left
 # exactly where they point rather than moved, so the history stays honest.
-TAG = "v1.5-final"
+TAG = "v1.6-final"
 TAG_URL = f"{REPO_URL}/releases/tag/{TAG}"
 BLANK = "_" * 34            # a ruled fill-in field, not a placeholder to delete
 
@@ -575,8 +575,9 @@ TIGHTEN = {
     "Testing combines unit and API tests with a running-server smoke workflow. "
     "175 backend tests pass at 90 per cent statement coverage (861 of 953 "
     "statements) on both SQLite and PostgreSQL 16.6; the only modules with zero "
-    "coverage are the disabled classifier placeholder and the seeding script. "
-    "Twenty-two live checks per engine cover login, staff data isolation, valid "
+    "coverage are the disabled classifier placeholder and the command-line seeding "
+    "script. Twenty-two live checks per engine cover login, staff data isolation, "
+    "valid "
     "and invalid transitions, duplicates, approval and audit access. On the "
     "frontend, 92 tests render real components in jsdom. Negative cases include "
     "forged and expired tokens, a tampered role claim, over-long input and "
@@ -723,36 +724,36 @@ APPENDIX_A = [
     ["A1", "Analyst signs in with valid credentials",
      "200 with a typed access token; dashboard loads",
      "As expected", "Pass"],
-    ["A2", "Sign in with a wrong password",
-     "401 with the same message an unknown address returns",
-     "401, 'Incorrect email or password'", "Pass"],
-    ["A3", "Protected route called with no token",
-     "401 and no data returned", "As expected", "Pass"],
-    ["A4", "Password of 72 characters but 144 UTF-8 bytes",
+    # Two cases were dropped to bring this table to the ten the brief asks for.
+    # "A wrong password returns the same message as an unknown address" is stated in
+    # section 5, and "a request with no token is refused" is the weaker half of A9,
+    # where a forged token grants nothing either. Neither property loses its
+    # evidence; both still have tests in the suite.
+    ["A2", "Password of 72 characters but 144 UTF-8 bytes",
      "422 naming the byte limit, because bcrypt's limit is bytes",
      "422, 'must be 72 bytes or fewer'", "Pass"],
-    ["A5", "Over-length subject submitted (501 characters)",
+    ["A3", "Over-length subject submitted (501 characters)",
      "422 at the API boundary rather than a database error",
      "As expected on both engines", "Pass"],
-    ["A6", "Release an email that was never held",
+    ["A4", "Release an email that was never held",
      "409 naming the states the action applies to; status unchanged",
      "409, email remained 'inbox'", "Pass"],
-    ["A7", "Staff member lists email, then opens the audit log",
+    ["A5", "Staff member lists email, then opens the audit log",
      "Only their own mail; 403 on the audit route",
      "5 of 8 returned; 403", "Pass"],
-    ["A8", "Second pending release request for the same email",
+    ["A6", "Second pending release request for the same email",
      "409 and no second row, enforced by a partial unique index",
      "As expected, concurrently as well", "Pass"],
-    ["A9", "Release request with a nine-character justification",
+    ["A7", "Release request with a nine-character justification",
      "422; the dialog stays open showing the server's message",
      "As expected", "Pass"],
-    ["A10", "Analyst approves a pending request",
+    ["A8", "Analyst approves a pending request",
      "Email released, review and audit rows written in one transaction",
      "All three updated together", "Pass"],
-    ["A11", "Token re-signed with a tampered role claim",
+    ["A9", "Token re-signed with a tampered role claim",
      "403, because the role is re-read from the database",
      "As expected", "Pass"],
-    ["A12", "Corrupt JSON written into a stored score_reasons value",
+    ["A10", "Corrupt JSON written into a stored score_reasons value",
      "The record still opens, with a placeholder reason",
      "200 with placeholder", "Pass"],
 ]

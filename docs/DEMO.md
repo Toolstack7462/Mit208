@@ -10,7 +10,7 @@ Nothing here needs the internet once the dependencies are installed.
 ## 0. The five minutes before the session
 
 ```bash
-git switch --detach v1.5-final     # the assessed version
+git switch --detach v1.6-final     # the assessed version
 git status                         # must print "nothing to commit, working tree clean"
 ```
 
@@ -26,7 +26,7 @@ Have open in separate browser tabs:
 | 3 | http://127.0.0.1:8000/system/database-status | proof of which engine is live |
 | 4 | https://github.com/Toolstack7462/Mit208 | the repository |
 | 5 | https://github.com/Toolstack7462/Mit208/actions | the passing CI run |
-| 6 | https://github.com/Toolstack7462/Mit208/releases/tag/v1.5-final | the assessed version |
+| 6 | https://github.com/Toolstack7462/Mit208/releases/tag/v1.6-final | the assessed version |
 
 ---
 

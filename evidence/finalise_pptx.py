@@ -42,7 +42,7 @@ SHOTS = HERE / "screenshots"
 FIGURES = HERE / "figures"
 TMP = HERE / "_pptx_tmp"
 
-TAG = "v1.5-final"
+TAG = "v1.6-final"
 REPO = "github.com/Toolstack7462/Mit208"
 
 # The presenter's prompt sheet lands here, outside the submission folder.

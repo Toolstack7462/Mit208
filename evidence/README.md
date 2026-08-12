@@ -31,8 +31,8 @@ Re-run the scripts after any interface change and the evidence updates itself.
 | `video/TIMING.md` | Generated timeline of what appears when |
 | `NARRATION_SCRIPT.md` | Draft narration and shot list for the student to record |
 | `update_report.py`, `trim_report.py`, `trim_report2.py` | Earlier passes over the report DOCX: correct figures, then fit the word allocation |
-| `finalise_report.py` | The final pass: removes placeholders, adds the figures and appendices, fixes pagination, reports the body word count |
-| `update_pptx.py`, `finalise_pptx.py` | Edit the presentation in place: figures, screenshots, speaker notes. Every substitution is checked, so a stale figure cannot survive silently |
+| `finalise_report.py` | The final pass: removes placeholders, adds the figures and appendices, removes the blank pages the section breaks leave behind, and reports the word count the way the brief counts it |
+| `update_pptx.py`, `finalise_pptx.py` | Edit the presentation in place: figures and screenshots. Every substitution is checked, so a stale figure cannot survive silently. The presenter prompts are exported to the private rehearsal set and then removed from the submitted deck |
 | `to_pdf.ps1` | Renders the DOCX and PPTX to PDF with Word and PowerPoint, so the pagination matches what the author saw |
 
 ---

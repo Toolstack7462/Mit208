@@ -469,6 +469,171 @@ BODY = {
     ),
 }
 
+# ---------------------------------------------------------------------------
+# Word-allocation pass
+# ---------------------------------------------------------------------------
+# Counted the way the brief counts it — everything from the Executive summary to
+# the end of the Conclusion, section headings and figure captions included — the
+# wording above came to 1,822 words against a 1,500-1,600 target. These are the
+# same paragraphs said more briefly, and they override the entries above.
+#
+# Nothing verifiable is traded for brevity: every test figure, coverage figure,
+# citation, figure and appendix cross-reference and disclosed limitation above
+# survives here. Section 3 also loses one sentence that section 4 states in
+# full, which was duplication rather than length.
+TIGHTEN = {
+ "PhishGuard is a student prototype": (
+    "PhishGuard is a student prototype for triaging suspicious email and controlling "
+    "quarantine and release decisions. It gives analysts explainable risk evidence and "
+    "staff a governed way to challenge a held message, combining React, FastAPI and "
+    "SQLAlchemy over PostgreSQL with SQLite as a local fallback. Detection is a "
+    "transparent rule-based score, not a trained model. The core workflow is complete, "
+    "with role and state rules enforced on the server and in the database, and verified "
+    "by 175 backend tests at 90 per cent statement coverage on both SQLite and PostgreSQL "
+    "16.6, 92 frontend tests, 22 live API checks per engine, 25 screenshots and a "
+    "four-minute walkthrough."
+ ),
+ "Phishing review is difficult": (
+    "Phishing review is difficult when users receive only a warning without evidence, or "
+    "when a held message cannot be challenged through a controlled process. PhishGuard "
+    "serves analysts who review risk indicators and staff whose messages may be held. Its "
+    "objectives were to authenticate role-based users; score emails with understandable "
+    "reasons; present dashboard and inbox views; let analysts quarantine, release or "
+    "confirm phishing only from valid states; let staff request release of their own held "
+    "email; and record actions in an audit trail. Appendix B sets planned against "
+    "completed. Live mailbox integration, production deployment and trained "
+    "classification are out of scope, and SPF, DKIM and DMARC values are simulated "
+    "because the samples carry no real SMTP headers."
+ ),
+ "The public repository shows": (
+    "The repository shows an incremental journey rather than one final upload. Nine "
+    "commits between June and July 2026 cover the initial full-stack MVP, interface "
+    "redesign, dashboard chart, documentation, screenshots and backend tests; further "
+    "commits in August carry the hardening below, separated by concern. During the final "
+    "review I compared code, tests and documentation against the assessment criteria "
+    "rather than relying on README claims, which exposed a gap between restrictions shown "
+    "in the interface and rules enforced by the API. I kept the architecture and "
+    "prioritised high-value corrections: an explicit state machine, duplicate-request "
+    "prevention, authorisation read from the database rather than the token, atomic "
+    "transactions, database constraints, frontend tests and continuous integration. Work "
+    "was planned by risk: security defects first, reproducibility second, presentation "
+    "last. DistilBERT stayed out of scope, because an unverified classifier would weaken "
+    "a working MVP."
+ ),
+ "The final design uses": (
+    "The final design uses the layered architecture in Figure 1. React and React Router "
+    "present role-specific pages and send bearer-token requests through Axios. FastAPI "
+    "routers separate authentication, email, dashboard, release-request and audit "
+    "operations. Pydantic schemas validate the API boundary, and a central dependency "
+    "reloads the active user from the database on every request; authorisation uses that "
+    "stored role only, so a tampered token claim grants nothing. SQLAlchemy models "
+    "coordinate the five tables in Figure 2 — users, email records, analyst reviews, "
+    "release requests and audit events. PostgreSQL is the assessed target and SQLite a "
+    "reproducible local fallback. The deterministic scoring module adds bounded points for "
+    "impersonation, urgency, credential requests and suspicious links, storing a score, "
+    "level and readable reasons."
+ ),
+ "React 18 and Vite": (
+    "React 18 and Vite were retained because the interface was already componentised and "
+    "suited to a local demonstration. Shared authentication state revalidates a cached "
+    "session through /api/auth/me on load, discarding a stale stored user. Every data "
+    "page has distinct loading, empty and failure states, with a retry action and a "
+    "reference identifier whenever the API returned one. Figure 3 shows the core "
+    "workflow; Appendix E shows selected screens at full size."
+ ),
+ "FastAPI suited": (
+    "FastAPI suited typed request handling and automatic OpenAPI documentation (FastAPI, "
+    "n.d.). Authentication uses bcrypt hashes and expiring signed JSON Web Tokens. "
+    "Password handling respects bcrypt's 72-byte limit and refuses longer input rather "
+    "than truncating it, since truncation would make two different long passwords "
+    "interchangeable. Tokens carry issued-at, unique-identifier and token-type claims, so "
+    "one minted for another purpose cannot be replayed. Protected routes confirm the user "
+    "is still active, so deactivation takes effect immediately (OWASP Foundation, n.d.; "
+    "Jones, Bradley and Sakimura, 2015)."
+ ),
+ "The most important backend change": (
+    "The most important backend change was turning workflow assumptions into explicit "
+    "policy. Every action now declares the statuses it may be applied from, so releasing "
+    "an email that was never withheld is refused with a conflict before any row is "
+    "written; previously only a repeat was refused. One module holds that table, both "
+    "routes that can move an email import it, and the interface mirrors it. Release "
+    "requests are staff-only and limited to the caller's own held mail. Transactions "
+    "commit status, review and audit rows together and roll back on failure (SQLAlchemy, "
+    "2026). Constraints restrict role, status and decision values, and a partial unique "
+    "index guards duplicates (PostgreSQL Global Development Group, 2026a; 2026b)."
+ ),
+ "Testing combines unit": (
+    "Testing combines unit and API tests with a running-server smoke workflow. 175 "
+    "backend tests pass at 90 per cent statement coverage (861 of 953 statements) on both "
+    "SQLite and PostgreSQL 16.6; the only modules with zero coverage are the disabled "
+    "classifier placeholder and the seeding script. Twenty-two live checks per engine "
+    "cover login, staff data isolation, valid and invalid transitions, duplicates, "
+    "approval and audit access. On the frontend, 92 tests render real components in jsdom. "
+    "Negative cases include forged and expired tokens, a tampered role claim, over-long "
+    "input and malformed stored reasons. Appendix A lists representative cases with "
+    "expected and actual results."
+ ),
+ "Security controls include": (
+    "Security controls include bcrypt hashes, expiring typed JWTs, server-side role "
+    "checks, per-IP limiting of failed logins, input bounds, ownership filtering, CORS, "
+    "security headers and constraints that reject "
+    "impossible rows. Login answers an unknown address and a wrong password identically, "
+    "so it cannot reveal which accounts exist. The audit trail is append-only at "
+    "application level — no route updates or deletes a row — though a database "
+    "administrator could. These suit a prototype, not production: there "
+    "is no multi-factor authentication, token revocation, tamper-evident logging or local "
+    "HTTPS, and the rate limiter counts within one process. Against PostgreSQL 16.6 the "
+    "schema applied cleanly, ten check constraints and the partial unique index were "
+    "confirmed, and six invalid writes were rejected; a committed secret scan reports no "
+    "credential in any tracked file (NIST, 2022)."
+ ),
+ "Two defects shaped": (
+    "Two defects shaped the final changes. First, any analyst action was accepted from "
+    "any state: only a repeat was refused, so an email never held could be released, "
+    "recording a decision nobody made in the trail meant to hold analysts accountable. An "
+    "explicit action-to-source-state table now governs both routes that can move an "
+    "email. Second, the ownership check on release requests tested the caller's role "
+    "before comparing the recipient, so an analyst could raise a request against any "
+    "mailbox; that endpoint is now staff-only."
+ ),
+ "A third problem was malformed": (
+    "A third problem was malformed JSON in the stored scoring reasons: the handler parsed "
+    "that column directly, so one corrupt row made its message permanently unopenable. "
+    "Defensive parsing now substitutes a placeholder, and a regression test corrupts a "
+    "row to prove it. Appendix C records each problem with its fix and test. Remaining "
+    "limitations are synthetic data, simulated authentication headers, a phrase-matching "
+    "templated-language flag, an unimplemented DistilBERT placeholder, browser-stored "
+    "tokens and no browser-level test."
+ ),
+ "The prototype meets its functional": (
+    "The prototype meets its functional objectives. Analysts can authenticate, inspect "
+    "explainable indicators and apply validated actions. Staff data is scoped by "
+    "recipient, and a staff member can raise one controlled release request; approval "
+    "updates request, email, review and audit records together. My strongest learning "
+    "outcome was that interface restrictions are not security controls: every role, "
+    "ownership and state rule must be rechecked server-side and, where possible, backed "
+    "by a database constraint."
+ ),
+ "Passing tests locally": (
+    "Passing tests locally is not the same as being reproducible, so the evidence is "
+    "independent of this machine: the continuous-integration run passes on the public "
+    "repository and the assessed commit carries a tag, both shown in Appendix D. The "
+    "clearest limits are the synthetic dataset and the absence of a browser-level test, "
+    "so the workflow is proven at the API boundary."
+ ),
+ "PhishGuard demonstrates a coherent": (
+    "PhishGuard demonstrates a coherent, explainable phishing-triage workflow with "
+    "role-based access, validated state changes, controlled release requests, audit "
+    "evidence and repeatable testing. The final review improved reliability and security "
+    "without replacing the architecture or overstating the rule engine. It is supported "
+    "by 267 automated tests, 22 live API checks per engine, 25 labelled screenshots and a "
+    "recording of the running application, all reproducible from the repository. Its "
+    "boundaries are stated: synthetic data, simulated authentication headers and no "
+    "trained classifier. Next steps are a browser-level test suite and stronger session "
+    "controls."
+ ),
+}
+
 REFERENCES = {
     "FastAPI (n.d.)": (
         "FastAPI (n.d.) OAuth2 with Password (and hashing), Bearer with JWT tokens. "
@@ -670,11 +835,9 @@ AI_DECLARATION = (
     "suggesting additional negative and boundary test cases. I reviewed every "
     "suggestion, reproduced each reported defect with a probe test before changing "
     "code, and kept only changes I could explain and defend. Every figure reported "
-    "here is recorded output from commands run on my own machine: the test counts, the "
-    "coverage percentage, the live workflow and the PostgreSQL verification. The "
-    "screenshots and the walkthrough recording are captures of the running "
-    "application. I remain responsible for the submitted code, its security, the "
-    "citations and this explanation."
+    "here is recorded output from commands run on my own machine, and the screenshots "
+    "and the walkthrough are captures of the running application. I remain responsible "
+    "for the submitted code, its security, the citations and this explanation."
 )
 
 def load_ci() -> tuple[dict, list[list[str]]]:
@@ -777,16 +940,135 @@ def landscape_ci_page(doc, after, ci: dict, ci_rows: list[list[str]],
         pic_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         pic_p.paragraph_format.space_after = Pt(2)
         pic_p.add_run().add_picture(str(SHOTS / ci[key]),
-                                    width=Inches(4.95), height=Inches(3.09))
+                                    width=Inches(4.40), height=Inches(2.75))
         cap_p = cell.add_paragraph()
         cap_p.style = doc.styles["Caption"]
         cap_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         cap_p.add_run(caption)
 
+    # Without this the row splits: the pictures stay on the page and the captions
+    # move to the next one, which is how Appendix D grew a second, near-empty page.
+    for row in shots.rows:
+        row._tr.get_or_add_trPr().append(OxmlElement("w:cantSplit"))
+
     end_landscape = para_after(shots)
     compact(end_landscape)
     set_sectpr(end_landscape, landscape_sectpr)
     return end_landscape
+
+
+def drop_blank_page_before(doc, heading: Paragraph) -> int:
+    """Empty paragraphs in front of a heading that already starts its own page.
+
+    The source document ended its references with a manual break and a spare empty
+    paragraph. Combined with pageBreakBefore on the appendix heading, that rendered
+    an entirely blank page between the references and Appendix A.
+    """
+    removed = 0
+    prev = heading._p.getprevious()
+    while prev is not None and prev.tag == qn("w:p"):
+        para = Paragraph(prev, heading._parent)
+        if para.text.strip():
+            break
+        nxt = prev.getprevious()
+        prev.getparent().remove(prev)
+        removed += 1
+        prev = nxt
+    return removed
+
+
+def collapse_final_section(doc) -> bool:
+    """Remove the empty trailing page after the last landscape figure.
+
+    Each landscape page is closed by a carrier paragraph holding the next
+    section's properties. After the final figure that carrier opens a portrait
+    section with nothing in it, and Word renders it as a blank last page. Moving
+    its section properties onto the body and dropping the carrier ends the
+    document on the figure instead.
+    """
+    body = doc.element.body
+    kids = list(body.iterchildren())
+    if not kids or kids[-1].tag != qn("w:sectPr"):
+        return False
+    body_sectPr = kids[-1]
+    last_p = next((el for el in reversed(kids) if el.tag == qn("w:p")), None)
+    if last_p is None or Paragraph(last_p, doc).text.strip():
+        return False
+    pPr = last_p.find(qn("w:pPr"))
+    sect = pPr.find(qn("w:sectPr")) if pPr is not None else None
+    if sect is None:
+        return False
+    body.remove(body_sectPr)
+    pPr.remove(sect)
+    body.remove(last_p)
+    body.append(sect)
+    return True
+
+
+def scrub_hidden(doc) -> list[str]:
+    """Remove anything a marker could open that is not part of the report.
+
+    A submitted DOCX should carry no comments, no tracked changes, no hidden runs
+    and no authorship metadata. Each is checked and reported rather than assumed
+    absent, so the output says what was actually found.
+    """
+    notes: list[str] = []
+    W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    body = doc.element.body
+
+    # Comment anchors and ranges in the body.
+    removed = 0
+    for tag in ("commentRangeStart", "commentRangeEnd", "commentReference"):
+        for el in body.iter(f"{W}{tag}"):
+            el.getparent().remove(el)
+            removed += 1
+    notes.append(f"comment references removed: {removed}")
+
+    # Comment and people parts, if Word ever created them.
+    dropped = []
+    for rel_id, rel in list(doc.part.rels.items()):
+        if any(k in rel.reltype for k in ("/comments", "/people", "/commentsExtended")):
+            doc.part.drop_rel(rel_id)
+            dropped.append(rel.reltype.rsplit("/", 1)[-1])
+    notes.append(f"comment parts dropped: {dropped or 'none present'}")
+
+    # Tracked changes: accept insertions (unwrap) and drop deletions.
+    ins = dels = 0
+    for el in list(body.iter(f"{W}ins")):
+        parent = el.getparent()
+        for child in list(el):
+            parent.insert(list(parent).index(el), child)
+        parent.remove(el)
+        ins += 1
+    for el in list(body.iter(f"{W}del")):
+        el.getparent().remove(el)
+        dels += 1
+    notes.append(f"tracked changes: {ins} insertions accepted, {dels} deletions dropped")
+
+    # Runs explicitly marked hidden would be invisible on the page but present in
+    # the file, so they are removed outright.
+    hidden_runs = 0
+    for v in list(body.iter(f"{W}vanish")):
+        run = v.getparent().getparent()
+        if run is not None and run.tag == f"{W}r":
+            run.getparent().remove(run)
+            hidden_runs += 1
+    notes.append(f"hidden runs removed: {hidden_runs}")
+
+    cp = doc.core_properties
+    cp.author = ""
+    cp.last_modified_by = ""
+    cp.comments = ""
+    cp.category = ""
+    cp.keywords = ""
+    cp.subject = ""
+    cp.title = "PhishGuard — Final Project Report (MIT208 Assessment 3)"
+    cp.content_status = ""
+    cp.identifier = ""
+    cp.language = "en-AU"
+    cp.revision = 1
+    notes.append("core properties scrubbed of authorship and draft metadata")
+    return notes
 
 
 def word_count(text: str) -> int:
@@ -877,11 +1159,16 @@ def main() -> int:
     set_text(find(doc, "Prepared 5 August"), "Prepared 12 August 2026")
 
     # -- 2. Body text -------------------------------------------------------
-    counts: list[tuple[str, int]] = []
     for needle, text in BODY.items():
         p = find(doc, needle)
         set_text(p, text)
         p.paragraph_format.widow_control = True
+
+    # The word-allocation pass runs second and has the last word on every body
+    # paragraph, so the reported counts are taken from it rather than from BODY.
+    counts: list[tuple[str, int]] = []
+    for needle, text in TIGHTEN.items():
+        set_text(find(doc, needle), text)
         counts.append((needle[:34], word_count(text)))
 
     for needle, text in REFERENCES.items():
@@ -1023,8 +1310,14 @@ def main() -> int:
              f"including its headings and figure captions, excluding the title page, "
              f"references and appendices ({whole:,} words in the whole document)")
 
-    # -- 7. Hidden content: comments, tracked changes, metadata -------------
-    hidden = scrub_hidden(doc)
+    # -- 7. Blank pages the section breaks left behind ----------------------
+    layout = []
+    n = drop_blank_page_before(doc, a_heading)
+    layout.append(f"empty paragraphs removed before Appendix A: {n}")
+    layout.append(f"trailing empty page removed: {collapse_final_section(doc)}")
+
+    # -- 8. Hidden content: comments, tracked changes, metadata -------------
+    hidden = scrub_hidden(doc) + layout
 
     doc.save(str(dst))
 
@@ -1036,13 +1329,26 @@ def main() -> int:
     print(f"Report written: {dst}")
     for line in hidden:
         print(f"  {line}")
-    print(f"\nBody word count by paragraph (target 1,500-1,600):")
+    print(f"\nNarrative paragraphs only (prose, no headings/tables/captions):")
     for label, n in counts:
         print(f"  {n:>4}  {label}")
+    prose = sum(n for _, n in counts)
     print(f"  ----")
-    print(f"  {total:>4}  TOTAL")
-    if not 1500 <= total <= 1600:
-        print(f"\n  WARNING: {total} is outside the 1,500-1,600 target range.")
+    print(f"  {prose:>4}  prose subtotal")
+
+    # The figure that is judged. Measured on the saved document rather than on the
+    # paragraph list above, so headings, body tables and figure captions are all
+    # included exactly as the brief counts them.
+    counted, whole = count_assessment_body(docx.Document(str(dst)))
+    print(f"\nAssessment-counted words (Executive summary to the end of the")
+    print(f"Conclusion, including headings, body tables and figure captions;")
+    print(f"excluding the title page, contents, references and appendices):")
+    print(f"  {counted:>4}  ASSESSED TOTAL   (target 1,500-1,600)")
+    print(f"  {whole:>4}  whole document, every paragraph and table")
+    if not 1500 <= counted <= 1600:
+        print(f"\n  WARNING: {counted} is outside the 1,500-1,600 target range.")
+    else:
+        print(f"\n  Within range.")
     return 0
 
 

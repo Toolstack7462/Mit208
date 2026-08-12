@@ -251,6 +251,67 @@ def test_login_with_an_over_long_password_is_a_validation_error(client):
     assert r.status_code == 422
 
 
+# --- The limit is 72 BYTES, not 72 characters -------------------------------
+
+def test_a_72_character_multibyte_password_is_rejected_at_the_boundary(client):
+    """bcrypt's limit is bytes. Pydantic's max_length counts characters, so on its
+    own it accepted 72 two-byte characters — 144 bytes — and the caller then got an
+    opaque 401 from deeper in the stack instead of a validation error."""
+    password = "é" * 72                       # 72 characters, 144 UTF-8 bytes
+    assert len(password) == 72
+    assert len(password.encode("utf-8")) == 144
+
+    r = client.post("/api/auth/login",
+                    json={"email": "analyst@phishguard.local", "password": password})
+    assert r.status_code == 422, r.text
+    assert "byte" in r.text.lower()
+
+
+def test_a_multibyte_password_inside_the_byte_limit_is_accepted_by_validation():
+    """The rule must bound bytes, not reject non-Latin characters outright: 30
+    two-byte characters is 60 bytes and has to pass."""
+    from app.schemas import LoginRequest
+    password = "é" * 30                       # 60 bytes
+    assert len(password.encode("utf-8")) == 60
+    assert LoginRequest(email="a@b.local", password=password).password == password
+
+
+def test_bcrypt_boundary_is_exact_at_72_bytes():
+    from app.schemas import LoginRequest
+    import pydantic
+    import pytest as _pytest
+
+    LoginRequest(email="a@b.local", password="A" * 72)          # exactly 72 bytes
+    with _pytest.raises(pydantic.ValidationError):
+        LoginRequest(email="a@b.local", password="A" * 71 + "é")  # 73 bytes
+
+
+# --- Both sign-in routes are audited ----------------------------------------
+
+def test_the_oauth2_token_route_is_audited_like_login(client, analyst_headers):
+    """/api/auth/token mints a real access token, so leaving it unaudited made
+    "every login is recorded" untrue for anyone signing in through Swagger."""
+    before = len(client.get("/api/audit-logs", headers=analyst_headers).json())
+
+    r = client.post("/api/auth/token",
+                    data={"username": "analyst@phishguard.local", "password": "Analyst@123"})
+    assert r.status_code == 200, r.text
+    assert r.json()["access_token"]
+
+    logs = client.get("/api/audit-logs", headers=analyst_headers).json()
+    assert len(logs) > before
+    assert any(entry["action"] == "login" for entry in logs)
+
+
+def test_the_api_reports_one_centralised_version(client):
+    """The OpenAPI document, GET / and GET /health must not drift apart."""
+    from app import __version__
+
+    assert client.get("/").json()["version"] == __version__
+    assert client.get("/health").json()["version"] == __version__
+    assert client.get("/openapi.json").json()["info"]["version"] == __version__
+
+
 def test_staff_cannot_read_another_users_email(client, staff_headers, analyst_headers):
     # Ingest mail addressed to a different person, then confirm staff@ cannot open it.
     other = client.post("/api/emails", headers=analyst_headers, json={

@@ -98,7 +98,7 @@ results are quarantined automatically:
   "id": 9, "message_id": "<ingest-4f2a…@phishguard.local>",
   "risk_score": 80, "risk_level": "critical", "status": "quarantined",
   "auth_spf": "fail", "auth_dkim": "fail", "auth_dmarc": "fail",
-  "ai_generated": true,
+  "templated_language": true,
   "reasons": [
     "Display name impersonates 'paypal' but domain is 'paypa1-support.com'.",
     "Urgency / pressure language: verify now, within 24 hours.",

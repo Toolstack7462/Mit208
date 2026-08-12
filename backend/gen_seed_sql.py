@@ -45,11 +45,11 @@ for i, (sender, name, rcpt, subj, body) in enumerate(SAMPLE_EMAILS):
     mid = f"<sample-{i + 1}@phishguard.local>"
     lines.append(
         "INSERT INTO email_records (message_id, sender, sender_name, recipient, subject, body, "
-        "status, risk_score, risk_level, score_reasons, auth_spf, auth_dkim, auth_dmarc, ai_generated, "
+        "status, risk_score, risk_level, score_reasons, auth_spf, auth_dkim, auth_dmarc, templated_language, "
         "received_at) VALUES (\n"
         f"  {q(mid)}, {q(sender)}, {q(name)}, {q(rcpt)}, {q(subj)}, {q(body)},\n"
         f"  {q(status)}, {r.score}, {q(r.level)}, {q(json.dumps(r.reasons))}, "
-        f"{q(r.spf)}, {q(r.dkim)}, {q(r.dmarc)}, {str(r.ai_generated).upper()}, "
+        f"{q(r.spf)}, {q(r.dkim)}, {q(r.dmarc)}, {str(r.templated_language).upper()}, "
         f"(CURRENT_DATE - INTERVAL '{DAYS_AGO[i]} days' + INTERVAL '12 hours'));"
     )
 

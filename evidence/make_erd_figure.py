@@ -82,7 +82,7 @@ TABLES = [
         ("risk_level", "varchar(16)", ""),
         ("score_reasons", "text (JSON)", ""),
         ("auth_spf/dkim/dmarc", "varchar(8)", ""),
-        ("ai_generated", "boolean", ""),
+        ("templated_language", "boolean", ""),
         ("received_at", "timestamptz", ""),
     ]),
     ("analyst_reviews", 990, 250, 620, [

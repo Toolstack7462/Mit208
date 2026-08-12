@@ -36,10 +36,9 @@ RISKY_EXTENSIONS = [".exe", ".scr", ".js", ".vbs", ".jar", ".iso", ".docm", ".xl
 # Brands commonly impersonated; flagged when display text claims the brand but
 # the actual sender / link domain does not match.
 KNOWN_BRANDS = ["paypal", "microsoft", "apple", "amazon", "netflix", "google", "bank", "dhl", "fedex", "ups"]
-# Templated phrasing commonly seen in AI-generated / mass phishing copy.
 # Stock phrases that mass-mailed phishing reuses. Matching one of these tells us
 # the copy is templated; it says nothing about who or what wrote it, which is why
-# this signal is called "templated language" rather than "AI-generated".
+# this signal is called "templated language".
 TEMPLATED_PHRASES = [
     "dear customer", "dear user", "dear valued", "we detected", "we have detected",
     "kindly", "we regret to inform", "please be advised", "rest assured",

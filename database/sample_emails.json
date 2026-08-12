@@ -20,7 +20,7 @@
       "Requests credentials / sensitive data: confirm your password, verify your identity.",
       "Link points directly to a raw IP address.",
       "Link text shows 'www.paypal.com' but actually points to '198.51.100.23'.",
-      "Copy uses templated phrasing typical of AI-generated / mass phishing."
+      "Copy uses templated phrasing typical of mass phishing."
     ]
   },
   {
@@ -87,7 +87,7 @@
       "Urgency / pressure language: immediately.",
       "Requests credentials / sensitive data: verify your account.",
       "References risky attachment type(s): .htm, .html.",
-      "Copy uses templated phrasing typical of AI-generated / mass phishing."
+      "Copy uses templated phrasing typical of mass phishing."
     ]
   },
   {

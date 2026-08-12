@@ -41,7 +41,7 @@ erDiagram
         varchar8    auth_spf      "pass | fail | none (simulated)"
         varchar8    auth_dkim
         varchar8    auth_dmarc
-        boolean     ai_generated
+        boolean     templated_language
         timestamptz received_at
         timestamptz created_at
     }

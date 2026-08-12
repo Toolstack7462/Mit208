@@ -36,3 +36,12 @@ Captured by `evidence/capture_postgres_evidence.py` against the application runn
 | `21-postgresql-database-status.png` | The API reporting PostgreSQL as the live engine, with using_fallback false — credentials are never included, only the URL scheme |
 | `22-postgresql-dashboard.png` | The analyst dashboard rendered from PostgreSQL data, on the assessed target database rather than the SQLite fallback |
 | `23-postgresql-openapi.png` | OpenAPI documentation served by the backend while connected to PostgreSQL |
+
+## Continuous integration and release evidence
+
+Captured by `evidence/capture_ci_evidence.py`, which reads the run from the GitHub API and refuses to write anything unless it passed. Run #16 on commit aa0bd76, all 6 jobs green.
+
+| File | What it shows |
+|---|---|
+| `24-ci-run-passing.png` | GitHub Actions run #16 on the public repository, every job green |
+| `25-release-tag.png` | The assessed version, tag v1.5-final, on the public repository |

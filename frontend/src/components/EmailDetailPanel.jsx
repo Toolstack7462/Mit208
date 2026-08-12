@@ -213,7 +213,10 @@ export default function EmailDetailPanel({ email, mode = "analyst", busy, onActi
           <div className="mt-2 text-xs text-slate-400">Message-ID: {email.message_id}</div>
         </div>
 
-        {/* ML analysis note */}
+        {/* Detection engine note. States what produced this score and nothing
+            more: a roadmap line in the running application reads as a product
+            commitment, and the unbuilt classifier belongs in the report's
+            limitations rather than in the interface. */}
         <div className="flex items-start gap-3 rounded-xl border border-brand/20 bg-brand/5 p-4">
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand/10 text-brand">
             <Cpu className="h-5 w-5" />
@@ -221,8 +224,7 @@ export default function EmailDetailPanel({ email, mode = "analyst", busy, onActi
           <div className="text-sm">
             <div className="font-semibold text-navy-900">Detection engine</div>
             <p className="text-slate-500">
-              Scored by the explainable <span className="font-medium text-slate-700">rule-based engine</span> ·
-              DistilBERT ML classifier planned for a future release.
+              Scored by the explainable <span className="font-medium text-slate-700">rule-based engine</span>.
             </p>
           </div>
         </div>

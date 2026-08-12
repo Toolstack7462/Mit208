@@ -83,8 +83,19 @@ def login_form(
     form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    """OAuth2 password flow so the Swagger 'Authorize' button works."""
+    """OAuth2 password flow so the Swagger 'Authorize' button works.
+
+    Audited identically to /login. This is a real sign-in that mints a real access
+    token, so leaving it unrecorded made "every login is recorded" false: signing in
+    through the Swagger Authorize button produced a usable token and no audit row.
+    """
     user = _guarded_authenticate(db, request, form.username, form.password)
+    record_audit(
+        db, user=user, action="login", entity_type="user", entity_id=user.id,
+        details="User logged in via the OAuth2 password flow",
+        ip_address=_client_key(request),
+    )
+    db.commit()
     token = create_access_token(subject=user.email, role=user.role)
     return Token(access_token=token, user=UserOut.model_validate(user))
 
